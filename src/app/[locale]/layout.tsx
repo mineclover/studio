@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: { params: { locale: string } 
   if (locale === 'ko') {
     title = "기사의 여행";
     description = "가상 체스판에서의 기사의 여행. 플레이 가능";
-    keywords = [...commonKeywords, ...devilPlanKeywords, "기사의 여행" , "나이트 투어", "체스 퍼즐", "보드 게임", "전략 게임", "두뇌 게임"];
+    keywords = [...commonKeywords, ...devilPlanKeywords, "기사의 여행" , "나이트 투어", "체스 퍼즐", "웹 게임"];
     openGraphLocale = 'ko_KR';
   } else { // Default to English
     title = "Knight's Tour Navigator | Chess Puzzle Visualization - The Devil's Plan";
