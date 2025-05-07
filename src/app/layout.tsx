@@ -36,18 +36,13 @@ export default function RootLayout({
   return (
     <html lang={currentLocale} suppressHydrationWarning>
       <head>
-        <meta name="google-adsense-account" content="ca-pub-7620199123041284">
+        <meta name="google-adsense-account" content="ca-pub-7620199123041284"/>
       </head>
   
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
         {children}
         <Toaster />
-        <Script
-      async
-      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-${PID}`}
-      crossOrigin="anonymous"
-      strategy="lazyOnload"
-    />
+        <Script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7620199123041284" crossorigin="anonymous" strategy="lazyOnload"/>
       </body>
     </html>
   );
