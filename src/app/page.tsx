@@ -1,3 +1,4 @@
+
 'use client';
 
 import type React from 'react';
@@ -30,8 +31,13 @@ const KnightTourPage: React.FC = () => {
   const [tourPath, setTourPath] = useState<{ x: number; y: number }[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [isVisualizing, setIsVisualizing] = useState<boolean>(false);
-  const [animationSpeed, setAnimationSpeed] = useState<number>(300); // milliseconds
+  const [animationSpeed, setAnimationSpeed] = useState<number>(300);
   const { toast } = useToast();
+
+  // User play state
+  const [isUserPlaying, setIsUserPlaying] = useState<boolean>(false);
+  const [userPath, setUserPath] = useState<{ x: number; y: number }[]>([]);
+  const [userCurrentPosition, setUserCurrentPosition] = useState<{ x: number; y: number } | null>(null);
 
   const initializeBoard = useCallback((size: number): Cell[][] => {
     return Array(size)
@@ -54,40 +60,41 @@ const KnightTourPage: React.FC = () => {
     setTourPath([]);
     setCurrentStep(0);
     setIsVisualizing(false);
+    // Reset user play state as well when board size changes
+    setIsUserPlaying(false);
+    setUserPath([]);
+    setUserCurrentPosition(null);
   }, [boardSize, initializeBoard]);
 
-  const isValidMove = (x: number, y: number, size: number, visited: boolean[][]): boolean => {
-    return x >= 0 && x < size && y >= 0 && y < size && !visited[y][x];
+  const isValidMove = (x: number, y: number, size: number, currentBoardState: Cell[][]): boolean => {
+    return x >= 0 && x < size && y >= 0 && y < size && currentBoardState[y][x].step === null;
   };
-
+  
   const findTour = (size: number): { x: number; y: number }[] | null => {
     const path: { x: number; y: number }[] = [];
-    const visited: boolean[][] = Array(size)
+    // Create a temporary visited array for the AI solver based on a clean board
+    const visitedForSolver: boolean[][] = Array(size)
       .fill(null)
       .map(() => Array(size).fill(false));
 
-    // Try to find a solution from a few common starting points or a random one for larger boards
-    // For simplicity, we'll try starting from (0,0)
-    // A more robust solution might try multiple starting points or a more advanced heuristic.
     const startX = 0;
     const startY = 0;
 
     path.push({ x: startX, y: startY });
-    visited[startY][startX] = true;
+    visitedForSolver[startY][startX] = true;
 
-    if (solveTourUtil(startX, startY, 1, size, visited, path, KNIGHT_MOVES)) {
+    if (solveTourUtil(startX, startY, 1, size, visitedForSolver, path, KNIGHT_MOVES)) {
       return path;
     }
-    return null; // No solution found from this starting point
+    return null;
   };
   
-  // Backtracking utility
   const solveTourUtil = (
     currX: number,
     currY: number,
     moveCount: number,
     size: number,
-    visited: boolean[][],
+    visited: boolean[][], // This visited is for the AI solver
     path: { x: number; y: number }[],
     moves: {x: number, y: number}[]
   ): boolean => {
@@ -95,16 +102,17 @@ const KnightTourPage: React.FC = () => {
       return true;
     }
   
-    // Warnsdorff's rule: move to the square from which the knight will have the fewest onward moves.
-    // This is a heuristic that significantly improves finding a solution.
     const nextMoves = [];
     for (const move of moves) {
       const nextX = currX + move.x;
       const nextY = currY + move.y;
-      if (isValidMove(nextX, nextY, size, visited)) {
+      // Use the passed 'visited' for AI solver's isValidMove checks
+      if (nextX >= 0 && nextX < size && nextY >= 0 && nextY < size && !visited[nextY][nextX]) {
         let count = 0;
         for (const nextNextMove of moves) {
-          if (isValidMove(nextX + nextNextMove.x, nextY + nextNextMove.y, size, visited)) {
+           if (nextX + nextNextMove.x >= 0 && nextX + nextNextMove.x < size &&
+               nextY + nextNextMove.y >= 0 && nextY + nextNextMove.y < size &&
+               !visited[nextY + nextNextMove.y][nextX + nextNextMove.x]) {
             count++;
           }
         }
@@ -123,7 +131,6 @@ const KnightTourPage: React.FC = () => {
         return true;
       }
   
-      // Backtrack
       path.pop();
       visited[nextY][nextX] = false;
     }
@@ -132,58 +139,162 @@ const KnightTourPage: React.FC = () => {
   };
 
   const handleStartVisualization = () => {
+    if (isUserPlaying) setIsUserPlaying(false); // Stop user play if active
     setIsVisualizing(true);
     setCurrentStep(0);
     const newBoard = initializeBoard(boardSize);
     setBoard(newBoard);
+    setUserPath([]);
+    setUserCurrentPosition(null);
+
 
     const foundPath = findTour(boardSize);
     if (foundPath) {
       setTourPath(foundPath);
       toast({
-        title: "Tour Found!",
+        title: "AI Tour Found!",
         description: `Starting visualization for a ${boardSize}x${boardSize} board.`,
       });
     } else {
       setTourPath([]);
       setIsVisualizing(false);
       toast({
-        title: "No Tour Found",
-        description: `Could not find a Knight's Tour for a ${boardSize}x${boardSize} board from the starting position. Try a different size or refresh.`,
+        title: "No AI Tour Found",
+        description: `Could not find a Knight's Tour for a ${boardSize}x${boardSize} board from the starting position.`,
         variant: "destructive",
       });
     }
   };
 
+  // AI Visualization useEffect
   useEffect(() => {
-    if (isVisualizing && tourPath.length > 0 && currentStep < tourPath.length) {
+    if (isVisualizing && !isUserPlaying && tourPath.length > 0 && currentStep < tourPath.length) {
       const timer = setTimeout(() => {
         setBoard((prevBoard) => {
           const newBoard = prevBoard.map((row) =>
             row.map((cell) => ({
               ...cell,
               isCurrent: false,
-              isPath: cell.isPath || (cell.x === tourPath[currentStep].x && cell.y === tourPath[currentStep].y),
+              // Persist path for AI visualization
+              isPath: cell.isPath || (tourPath[currentStep] && cell.x === tourPath[currentStep].x && cell.y === tourPath[currentStep].y),
             }))
           );
-          const { x, y } = tourPath[currentStep];
-          if (newBoard[y] && newBoard[y][x]) {
-            newBoard[y][x].step = currentStep + 1;
-            newBoard[y][x].isCurrent = true;
+          if (tourPath[currentStep]) {
+            const { x, y } = tourPath[currentStep];
+            if (newBoard[y] && newBoard[y][x]) {
+              newBoard[y][x].step = currentStep + 1;
+              newBoard[y][x].isCurrent = true;
+            }
           }
           return newBoard;
         });
         setCurrentStep((prev) => prev + 1);
       }, animationSpeed);
       return () => clearTimeout(timer);
-    } else if (isVisualizing && currentStep >= tourPath.length && tourPath.length > 0) {
+    } else if (isVisualizing && !isUserPlaying && currentStep >= tourPath.length && tourPath.length > 0) {
       setIsVisualizing(false);
        toast({
-        title: "Tour Complete!",
+        title: "AI Tour Complete!",
         description: `Knight successfully visited all ${boardSize*boardSize} squares.`,
       });
     }
-  }, [isVisualizing, currentStep, tourPath, animationSpeed, boardSize, toast]);
+  }, [isVisualizing, currentStep, tourPath, animationSpeed, boardSize, toast, isUserPlaying]);
+
+
+  const handleToggleUserPlay = () => {
+    if (isUserPlaying) { // Stop playing
+      setIsUserPlaying(false);
+      setUserPath([]);
+      setUserCurrentPosition(null);
+      setBoard(initializeBoard(boardSize));
+      toast({ title: "Play Mode Deactivated." });
+    } else { // Start playing
+      setIsUserPlaying(true);
+      setIsVisualizing(false); // Stop AI visualization if active
+      setTourPath([]);
+      setCurrentStep(0);
+      setUserPath([]);
+      setUserCurrentPosition(null);
+      setBoard(initializeBoard(boardSize));
+      toast({
+        title: "Play Mode Activated!",
+        description: "Click a square on the board to place your knight and start the tour.",
+      });
+    }
+  };
+
+  const getValidMovesFromPosition = (posX: number, posY: number, currentBoardState: Cell[][], bSize: number): {x: number, y:number}[] => {
+    const validMoves: {x:number, y:number}[] = [];
+    KNIGHT_MOVES.forEach(move => {
+      const nextX = posX + move.x;
+      const nextY = posY + move.y;
+      if (isValidMove(nextX, nextY, bSize, currentBoardState)) {
+        validMoves.push({ x: nextX, y: nextY });
+      }
+    });
+    return validMoves;
+  };
+
+  const handleCellClick = (clickedCellCoords: { x: number; y: number }) => {
+    if (!isUserPlaying || isVisualizing) return;
+
+    const newBoard = board.map(row => row.map(cell => ({ ...cell }))); // Deep copy
+
+    if (!userCurrentPosition) { // First move
+      newBoard[clickedCellCoords.y][clickedCellCoords.x].step = 1;
+      newBoard[clickedCellCoords.y][clickedCellCoords.x].isCurrent = true;
+      
+      setBoard(newBoard);
+      setUserCurrentPosition(clickedCellCoords);
+      setUserPath([clickedCellCoords]);
+      toast({ description: "Knight placed. Make your next move." });
+    } else { // Subsequent moves
+      const { x: currentX, y: currentY } = userCurrentPosition;
+      const { x: targetX, y: targetY } = clickedCellCoords;
+
+      const dx = Math.abs(targetX - currentX);
+      const dy = Math.abs(targetY - currentY);
+      const isKnightMoveRule = (dx === 1 && dy === 2) || (dx === 2 && dy === 1);
+
+      if (isKnightMoveRule && isValidMove(targetX, targetY, boardSize, board)) {
+        // Valid move
+        newBoard[currentY][currentX].isCurrent = false;
+        newBoard[currentY][currentX].isPath = true;
+
+        newBoard[targetY][targetX].step = userPath.length + 1;
+        newBoard[targetY][targetX].isCurrent = true;
+
+        const newPath = [...userPath, clickedCellCoords];
+        setBoard(newBoard);
+        setUserCurrentPosition(clickedCellCoords);
+        setUserPath(newPath);
+
+        if (newPath.length === boardSize * boardSize) {
+          toast({
+            title: "Congratulations!",
+            description: "You've completed the Knight's Tour!",
+          });
+          setIsUserPlaying(false);
+        } else {
+          const availableMoves = getValidMovesFromPosition(targetX, targetY, newBoard, boardSize);
+          if (availableMoves.length === 0) {
+            toast({
+              title: "Game Over!",
+              description: "No more valid moves. You got stuck.",
+              variant: "destructive",
+            });
+            setIsUserPlaying(false);
+          }
+        }
+      } else {
+        toast({
+          description: "Invalid move. Please choose a valid, unvisited square.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background text-foreground">
@@ -199,15 +310,14 @@ const KnightTourPage: React.FC = () => {
                 value={boardSize.toString()}
                 onValueChange={(value) => {
                   setBoardSize(parseInt(value));
-                  setIsVisualizing(false); // Reset visualization on size change
                 }}
-                disabled={isVisualizing}
+                disabled={isVisualizing || isUserPlaying}
               >
                 <SelectTrigger id="board-size-select" className="w-[120px] bg-card text-card-foreground">
                   <SelectValue placeholder="Select size" />
                 </SelectTrigger>
                 <SelectContent>
-                  {[5, 6, 7, 8, 9].map((size) => (
+                  {[5, 6, 7, 8, 9, 10].map((size) => (
                     <SelectItem key={size} value={size.toString()}>
                       {size}x{size}
                     </SelectItem>
@@ -216,11 +326,11 @@ const KnightTourPage: React.FC = () => {
               </Select>
             </div>
             <div className="flex items-center gap-4">
-              <Label htmlFor="speed-select" className="text-lg">Speed:</Label>
+              <Label htmlFor="speed-select" className="text-lg">AI Speed:</Label>
               <Select
                 value={animationSpeed.toString()}
                 onValueChange={(value) => setAnimationSpeed(parseInt(value))}
-                disabled={isVisualizing}
+                disabled={isVisualizing || isUserPlaying}
               >
                 <SelectTrigger id="speed-select" className="w-[120px] bg-card text-card-foreground">
                   <SelectValue placeholder="Select speed" />
@@ -232,9 +342,23 @@ const KnightTourPage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleStartVisualization} disabled={isVisualizing} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              {isVisualizing ? 'Visualizing...' : "Start Tour"}
-            </Button>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Button 
+                onClick={handleStartVisualization} 
+                disabled={isVisualizing || isUserPlaying} 
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                {isVisualizing ? 'Visualizing AI...' : "Start AI Tour"}
+              </Button>
+              <Button 
+                onClick={handleToggleUserPlay} 
+                disabled={isVisualizing}
+                variant={isUserPlaying ? "destructive" : "default"}
+                className={isUserPlaying ? "" : "bg-accent hover:bg-accent/90 text-accent-foreground"}
+              >
+                {isUserPlaying ? 'Stop Playing' : "Play Yourself"}
+              </Button>
+            </div>
           </div>
 
           <div
@@ -252,18 +376,28 @@ const KnightTourPage: React.FC = () => {
                 <div
                   key={`${rowIndex}-${colIndex}`}
                   className={`flex items-center justify-center border border-border 
-                              transition-colors duration-300 ease-in-out
+                              transition-colors duration-100 ease-in-out
                               ${(rowIndex + colIndex) % 2 === 0 ? 'bg-secondary/50' : 'bg-background'}
                               ${cell.isPath ? 'bg-accent/30' : ''}
                               ${cell.isCurrent ? '!bg-accent' : ''}
+                              ${isUserPlaying && !isVisualizing && cell.step === null ? 'cursor-pointer hover:bg-primary/20' : ''}
+                              ${isUserPlaying && !isVisualizing && cell.step !== null ? 'cursor-not-allowed' : ''}
                               text-sm md:text-base lg:text-lg font-mono`}
                   style={{ aspectRatio: '1 / 1' }}
-                  aria-label={`Cell ${cell.x + 1}, ${cell.y + 1}${cell.step ? `, step ${cell.step}` : ''}`}
+                  onClick={() => handleCellClick({ x: cell.x, y: cell.y })}
+                  aria-label={`Cell ${cell.x + 1}, ${cell.y + 1}${cell.step ? `, step ${cell.step}` : ''} ${isUserPlaying && !isVisualizing && cell.step === null ? ', clickable' : ''}`}
+                  role={isUserPlaying && !isVisualizing ? "button" : "gridcell"}
+                  tabIndex={isUserPlaying && !isVisualizing && cell.step === null ? 0 : -1}
+                  onKeyDown={(e) => {
+                    if ((e.key === "Enter" || e.key === " ") && isUserPlaying && !isVisualizing && cell.step === null) {
+                      handleCellClick({ x: cell.x, y: cell.y });
+                    }
+                  }}
                 >
                   {cell.isCurrent ? (
                     <ChessKnightIcon className="w-3/5 h-3/5 text-accent-foreground animate-pulse" />
                   ) : cell.step !== null ? (
-                    <span className={`font-bold ${cell.isPath ? 'text-accent-foreground' : 'text-foreground'}`}>
+                    <span className={`font-bold ${cell.isPath || cell.isCurrent ? 'text-accent-foreground' : 'text-foreground'}`}>
                       {cell.step}
                     </span>
                   ) : null}
@@ -274,10 +408,19 @@ const KnightTourPage: React.FC = () => {
         </CardContent>
       </Card>
       <footer className="mt-8 text-center text-muted-foreground">
-        <p>Select board size and click "Start Tour" to visualize the Knight's journey.</p>
+        <p>
+          {isUserPlaying 
+            ? "You are playing! Click on a valid square to move the knight." 
+            : isVisualizing 
+            ? "Visualizing AI Knight's Tour..."
+            : "Select board size, speed for AI, and start a tour or play yourself."
+          }
+        </p>
       </footer>
     </div>
   );
 };
 
 export default KnightTourPage;
+
+    
