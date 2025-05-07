@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from "@/components/ui/toaster";
+import Script from 'next/script';
 import './globals.css';
 
 const geistSans = Geist({
@@ -34,9 +35,19 @@ export default function RootLayout({
 
   return (
     <html lang={currentLocale} suppressHydrationWarning>
+      <head>
+        <meta name="google-adsense-account" content="ca-pub-7620199123041284">
+      </head>
+  
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
         {children}
         <Toaster />
+        <Script
+      async
+      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-${PID}`}
+      crossOrigin="anonymous"
+      strategy="lazyOnload"
+    />
       </body>
     </html>
   );
