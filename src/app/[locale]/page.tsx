@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type React from 'react';
@@ -7,9 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { ChessKnightIcon } from '@/components/icons/ChessKnightIcon';
 import { cn } from '@/lib/utils';
-import { Clock, Bot, Info, Gamepad2, RefreshCcw, HelpCircle } from 'lucide-react';
+import { Clock, Bot, Info, Gamepad2, RefreshCcw, HelpCircle, ChessKnight } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -541,7 +541,7 @@ const KnightTourPage: React.FC = () => {
                   }}
                 >
                   {cell.isCurrent ? (
-                    <ChessKnightIcon className={cn(
+                    <ChessKnight className={cn(
                       "w-3/5 h-3/5",
                        gameMessage.type === 'error' && !timerActive ? 
                         'text-destructive-foreground opacity-90' : 
@@ -594,6 +594,3 @@ const KnightTourPage: React.FC = () => {
 };
 
 export default KnightTourPage;
-
-
-    
