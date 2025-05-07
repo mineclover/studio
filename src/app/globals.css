@@ -69,8 +69,8 @@
     --muted: 210 23% 22%;
     --muted-foreground: 210 10% 60%;
 
-    --accent: 180 80% 40%; /* Brighter Teal */
-    --accent-foreground: 0 0% 100%;
+    --accent: 180 80% 40%; /* #14C2C2 Brighter Teal */
+    --accent-foreground: 210 23% 10%; /* #151A21 Dark Blue/Black (was White) */
 
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;

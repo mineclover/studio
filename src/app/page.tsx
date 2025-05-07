@@ -397,7 +397,7 @@ const KnightTourPage: React.FC = () => {
                   {cell.isCurrent ? (
                     <ChessKnightIcon className="w-3/5 h-3/5 text-accent-foreground animate-pulse" />
                   ) : cell.step !== null ? (
-                    <span className={`font-bold ${cell.isPath || cell.isCurrent ? 'text-accent-foreground' : 'text-foreground'}`}>
+                    <span className="font-bold text-foreground"> {/* Ensured text-foreground for step numbers */}
                       {cell.step}
                     </span>
                   ) : null}
