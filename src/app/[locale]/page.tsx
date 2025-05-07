@@ -304,14 +304,14 @@ const KnightTourPage: React.FC = () => {
         
         if (newPath.length === boardSize * boardSize) {
           setTimerActive(false);
-          setIsUserPlaying(false); 
+          // setIsUserPlaying(false); // Keep user playing true to allow "Play Again" from game over state
           setGameMessage({ type: 'success', text: `Congratulations! You completed the Knight's Tour in ${formatTime(elapsedTime)}!` });
         } else {
           const availableMoves = getValidMovesFromPosition(targetX, targetY, newBoard, boardSize);
           if (availableMoves.length === 0) {
             setTimerActive(false);
-            setIsUserPlaying(false); 
-            setGameMessage({ type: 'error', text: `Game Over! No more valid moves. You made ${newPath.length} moves in ${formatTime(elapsedTime)}.` });
+            // setIsUserPlaying(false); // Keep user playing true
+            setGameMessage({ type: 'error', text: `Game Over! No more valid moves. You made ${newPath.length} moves.` });
           }
         }
       } else {
@@ -321,30 +321,9 @@ const KnightTourPage: React.FC = () => {
   };
   
   const showStartOverlay = !isUserPlaying && !isVisualizing && gameMessage.type === null;
-  const isBoardInteractable = isUserPlaying && !isVisualizing;
-  const isGameOverState = (!isUserPlaying && gameMessage.type === 'error' && !timerActive) || 
-                          (isUserPlaying && gameMessage.type === 'error' && !timerActive);
+  const isBoardInteractable = isUserPlaying && !isVisualizing && gameMessage.type !== 'success' && gameMessage.type !== 'error';
 
-
-  let footerText = "";
-  if (showStartOverlay) {
-    // Footer not very relevant when overlay is up
-  } else if (isGameOverState) {
-    footerText = `Stuck! ${userPath.length} moves. Try a new game?`;
-  } else if (gameMessage.type === 'success') {
-    footerText = `Victory! ${userPath.length} moves in ${formatTime(elapsedTime)}. Play again?`;
-  } else if (isUserPlaying) {
-    if (userPath.length === 0) {
-      footerText = "Click a square to start your knight's journey!";
-    } else {
-      footerText = "Your turn. Make your move.";
-    }
-  } else if (isVisualizing) {
-    footerText = "AI is gracefully navigating the board...";
-  } else if (!isUserPlaying && !isVisualizing && gameMessage.type !== 'success' && !isGameOverState) {
-    footerText = "Ready for a new challenge or want to see the AI's solution?";
-  }
-
+  const isGameOverState = (gameMessage.type === 'error' && !timerActive) || (gameMessage.type === 'success' && !timerActive);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 relative bg-background">
@@ -399,8 +378,8 @@ const KnightTourPage: React.FC = () => {
           "w-full max-w-2xl shadow-xl transition-all duration-500 ease-out rounded-2xl relative", 
           showStartOverlay && "opacity-0 pointer-events-none scale-95",
           !showStartOverlay && "opacity-100 scale-100",
-          gameMessage.type === 'success' && "game-success-card",
-          gameMessage.type === 'error' && !timerActive && "game-error-card animate-shake" 
+          gameMessage.type === 'success' && !timerActive && "game-success-card", // Apply only when game is won and timer stopped
+          gameMessage.type === 'error' && !timerActive && "game-error-card animate-shake"  // Apply only when game is lost and timer stopped
       )}>
         <CardHeader className="relative">
           <Dialog open={isHelpModalOpen} onOpenChange={setIsHelpModalOpen}>
@@ -472,9 +451,9 @@ const KnightTourPage: React.FC = () => {
           </Dialog>
 
           <CardTitle className="text-3xl font-bold text-center text-primary pt-1">Knight's Tour Challenge</CardTitle>
-          {isUserPlaying && (
+          {(isUserPlaying || isVisualizing || isGameOverState) && !showStartOverlay && ( // Show reset if game active, visualizing, or game over
             <Button
-                onClick={handleStopUserPlay}
+                onClick={handleStopUserPlay} // This function already resets the game
                 variant="ghost"
                 size="icon"
                 className="absolute top-4 right-4 text-muted-foreground hover:text-destructive p-1 rounded-full"
@@ -486,26 +465,27 @@ const KnightTourPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center gap-4 mb-6">
-            {(timerActive || (elapsedTime > 0 && (gameMessage.type === 'success' || isGameOverState))) && (
-              <div className="flex items-center text-2xl font-semibold text-primary mt-2 bg-secondary/70 dark:bg-secondary/50 px-4 py-2 rounded-lg shadow-sm">
+             {!showStartOverlay && (
+              <div className="flex items-center text-2xl font-semibold text-primary mt-2 bg-secondary/70 dark:bg-secondary/50 px-4 py-2 rounded-lg shadow-sm min-h-[3.5rem] "> {/* Added min-h for stability */}
                 <Clock className="w-7 h-7 mr-2" />
                 <span>{formatTime(elapsedTime)}</span>
               </div>
             )}
 
-            {gameMessage?.text && (gameMessage.type === 'success' || gameMessage.type === 'info') && ( 
+            {gameMessage?.text && (gameMessage.type === 'success' || gameMessage.type === 'info' || (gameMessage.type === 'error' && !timerActive)) && ( 
               <p className={cn(
                 "text-center font-semibold px-6 py-3 rounded-lg text-lg my-2 shadow-md",
-                gameMessage.type === 'success' && 'bg-green-100 text-green-800 dark:bg-green-700/40 dark:text-green-100 animate-bounce text-2xl',
+                gameMessage.type === 'success' && 'bg-green-100 text-green-800 dark:bg-green-700/40 dark:text-green-100 animate-bounce-subtle text-xl',
                 gameMessage.type === 'info' && 'bg-blue-100 text-blue-800 dark:bg-blue-700/40 dark:text-blue-100',
-                (gameMessage.type === 'success') && "min-h-[3em] flex items-center justify-center" 
+                gameMessage.type === 'error' && !timerActive && 'bg-red-100 text-red-800 dark:bg-red-700/40 dark:text-red-100 text-xl',
+                (gameMessage.type === 'success' || (gameMessage.type === 'error' && !timerActive)) && "min-h-[3em] flex items-center justify-center" 
               )}>
                 {gameMessage.text}
               </p>
             )}
             
             <div className="flex flex-wrap justify-center gap-4 mt-2">
-              {(gameMessage?.type === 'success' || isGameOverState) && !isVisualizing && (
+              {isGameOverState && !isVisualizing && (
                  <Button 
                   onClick={resetToInitialState} 
                   className="bg-accent hover:bg-accent/90 text-accent-foreground animate-pulse text-xl py-6 px-8 rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-transform"
@@ -537,17 +517,17 @@ const KnightTourPage: React.FC = () => {
                     text-sm md:text-base lg:text-lg font-mono font-semibold`,
                     (rowIndex + colIndex) % 2 === 0 ? 'bg-secondary/60 dark:bg-secondary/40' : 'bg-background/90 dark:bg-background/70',
                     
-                    cell.isPath && isGameOverState && gameMessage.type === 'error' ? 'bg-destructive/40 dark:bg-destructive/50' : 
-                    (cell.isPath ? 'bg-accent/50 dark:bg-accent/60' : ''),
+                    cell.isPath && gameMessage.type === 'error' && !timerActive ? 'bg-destructive/40 dark:bg-destructive/50 text-destructive-foreground/70' : 
+                    (cell.isPath ? 'bg-accent/50 dark:bg-accent/60 text-accent-foreground/90' : ''),
 
-                    cell.isCurrent && isGameOverState && gameMessage.type === 'error' ? '!bg-destructive/80 dark:!bg-destructive/70' :
-                    (cell.isCurrent ? '!bg-accent dark:!bg-accent/90' : ''),
+                    cell.isCurrent && gameMessage.type === 'error' && !timerActive ? '!bg-destructive/80 dark:!bg-destructive/70 text-destructive-foreground' :
+                    (cell.isCurrent ? '!bg-accent dark:!bg-accent/90 text-accent-foreground' : ''),
 
                     isBoardInteractable ?
                       (cell.step === null ? 'cursor-pointer hover:bg-primary/30 dark:hover:bg-primary/40' : 'cursor-not-allowed opacity-70') :
                       'cursor-default',
                     
-                    isGameOverState && gameMessage.type === 'error' && cell.step === null ? 'opacity-60 brightness-90' : ''
+                    gameMessage.type === 'error' && !timerActive && cell.step === null ? 'opacity-60 brightness-90' : ''
                   )}
                   style={{ aspectRatio: '1 / 1' }}
                   onClick={() => handleCellClick({ x: cell.x, y: cell.y })}
@@ -563,16 +543,22 @@ const KnightTourPage: React.FC = () => {
                   {cell.isCurrent ? (
                     <ChessKnightIcon className={cn(
                       "w-3/5 h-3/5",
-                      isGameOverState && gameMessage.type === 'error' ? 
+                       gameMessage.type === 'error' && !timerActive ? 
                         'text-destructive-foreground opacity-90' : 
                         'text-accent-foreground animate-pulse' 
                     )} />
                   ) : cell.step !== null ? (
                      <span className={cn(
                        "font-bold",
-                       isGameOverState && gameMessage.type === 'error' ?
-                          (cell.isPath ? 'text-destructive-foreground/90 dark:text-destructive-foreground/80' : 'text-foreground/60 dark:text-foreground/50') :
-                          (cell.isPath ? 'text-accent-foreground/95 dark:text-accent-foreground' : ((rowIndex + colIndex) % 2 === 0 ? 'text-secondary-foreground/95 dark:text-secondary-foreground' : 'text-foreground/95 dark:text-foreground'))
+                       gameMessage.type === 'error' && !timerActive && cell.isPath ?
+                          'text-destructive-foreground/90 dark:text-destructive-foreground/80' :
+                       gameMessage.type === 'error' && !timerActive && !cell.isPath ?
+                          'text-foreground/60 dark:text-foreground/50 opacity-80' :
+                       cell.isPath ? 
+                          'text-accent-foreground/95 dark:text-accent-foreground' : 
+                       (rowIndex + colIndex) % 2 === 0 ? 
+                          'text-secondary-foreground/95 dark:text-secondary-foreground' : 
+                          'text-foreground/95 dark:text-foreground'
                      )}>
                       {cell.step}
                     </span>
@@ -582,7 +568,7 @@ const KnightTourPage: React.FC = () => {
             )}
           </div>
           
-          {!showStartOverlay && !isUserPlaying && !isVisualizing && !(gameMessage.type === 'success' || isGameOverState) && (
+          {!showStartOverlay && !isUserPlaying && !isVisualizing && !isGameOverState && (
             <details className="mt-6 text-center text-sm group">
               <summary className="cursor-pointer text-muted-foreground hover:text-foreground inline-flex items-center gap-1 py-1 px-2 rounded-md hover:bg-muted transition-colors">
                 <Bot size={16} /> AI Controls <Info size={14} className="opacity-70 group-hover:opacity-100"/>
@@ -603,13 +589,11 @@ const KnightTourPage: React.FC = () => {
 
         </CardContent>
       </Card>
-      {!showStartOverlay && (
-        <footer className="mt-8 text-center text-muted-foreground text-base h-8 flex items-center justify-center px-4 py-2 bg-card rounded-lg shadow">
-          <p>{footerText}</p>
-        </footer>
-      )}
     </div>
   );
 };
 
 export default KnightTourPage;
+
+
+    
