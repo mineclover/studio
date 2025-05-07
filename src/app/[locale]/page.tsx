@@ -303,6 +303,7 @@ const KnightTourPage: React.FC = () => {
         setBoard(newBoard);
         setUserCurrentPosition(clickedCellCoords);
         setUserPath(newPath);
+        setGameMessage({ type: null, text: null }); // Clear previous messages
         
         if (newPath.length === boardSize * boardSize) {
           setTimerActive(false);
@@ -316,7 +317,8 @@ const KnightTourPage: React.FC = () => {
             setGameMessage({ type: 'error', text: `Game Over! No more valid moves. You made ${newPath.length} moves in ${formatTime(elapsedTime)}.` });
             // Board remains visible, user can see the final state. "Play Again?" will appear.
           } else {
-            setGameMessage({ type: 'info', text: 'Good move!' });
+            // Removed "Good move!" message as per user request. Visual feedback is primary.
+            // setGameMessage({ type: 'info', text: 'Good move!' }); 
           }
         }
       } else {
@@ -326,14 +328,14 @@ const KnightTourPage: React.FC = () => {
           variant: "destructive",
           duration: 3000,
         });
-        setGameMessage({ type: 'error', text: "Invalid move. Choose a valid, unvisited square." });
+        setGameMessage({ type: 'error', text: null }); // Trigger shake, no text banner for this error.
       }
     }
   };
   
   const showStartOverlay = !isUserPlaying && !isVisualizing && gameMessage.type === null;
   const isBoardInteractable = isUserPlaying && !isVisualizing;
-  const isGameOverState = !isUserPlaying && gameMessage.type === 'error';
+  const isGameOverState = (!isUserPlaying && gameMessage.type === 'error') || (isUserPlaying && gameMessage.type === 'error' && !timerActive);
 
 
   return (
@@ -388,7 +390,7 @@ const KnightTourPage: React.FC = () => {
           showStartOverlay && "opacity-0 pointer-events-none scale-95",
           !showStartOverlay && "opacity-100 scale-100",
           gameMessage.type === 'success' && "game-success-card",
-          gameMessage.type === 'error' && "game-error-card" // This will apply on game over
+          gameMessage.type === 'error' && "game-error-card animate-shake" // Card shakes on error
       )}>
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center text-primary">Knight's Tour Navigator</CardTitle>
@@ -402,11 +404,11 @@ const KnightTourPage: React.FC = () => {
               </div>
             )}
 
-            {gameMessage?.text && (
+            {gameMessage?.text && ( // This will only render if gameMessage.text is not null or empty
               <p className={cn(
                 "text-center font-semibold px-6 py-3 rounded-lg text-lg my-2",
                 gameMessage.type === 'success' && 'bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-200 animate-bounce text-2xl',
-                gameMessage.type === 'error' && 'bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-200 animate-shake text-2xl',
+                gameMessage.type === 'error' && 'bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-200 text-2xl', // Removed animate-shake here, card handles it
                 gameMessage.type === 'info' && 'bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-200',
                 (gameMessage.type === 'success' || gameMessage.type === 'error') && "min-h-[3em] flex items-center justify-center" 
               )}>
@@ -426,7 +428,7 @@ const KnightTourPage: React.FC = () => {
                 </Button>
               )}
               {/* "Play Again?" button shows on success OR error, when not visualizing */}
-              {(gameMessage?.type === 'success' || gameMessage?.type === 'error') && !isVisualizing && (
+              {(gameMessage?.type === 'success' || isGameOverState) && !isVisualizing && (
                  <Button 
                   onClick={resetToInitialState} 
                   className="bg-accent hover:bg-accent/90 text-accent-foreground animate-pulse text-xl py-6 px-8 rounded-lg"
@@ -533,7 +535,7 @@ const KnightTourPage: React.FC = () => {
         <footer className="mt-8 text-center text-muted-foreground">
           <p>
             {isUserPlaying && userPath.length === 0 && "Click a square to place your knight."}
-            {isUserPlaying && userPath.length > 0 && !gameMessage.text?.toLowerCase().includes('game over') && !gameMessage.text?.toLowerCase().includes('congratulations') && "Continue your tour, brave knight!"}
+            {isUserPlaying && userPath.length > 0 && !gameMessage.text?.toLowerCase().includes('game over') && !gameMessage.text?.toLowerCase().includes('congratulations') && gameMessage.type !== 'error' && "Continue your tour, brave knight!"}
             {isVisualizing && "Watch the AI conquer the board!"}
           </p>
         </footer>
