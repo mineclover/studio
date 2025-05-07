@@ -22,9 +22,9 @@ export async function generateMetadata({ params }: { params: { locale: string } 
   let title, description, keywords, openGraphLocale;
 
   if (locale === 'ko') {
-    title = "나이트 투어 네비게이터 | 체스 퍼즐 시각화 - 데블스 플랜";
-    description = "가상 체스판에서 나이트 투어 문제를 탐색하고 시각화하세요. 직접 해결하거나 AI의 움직임을 관찰하세요. 넷플릭스 데블스 플랜과 같은 전략 게임에서 영감을 받았습니다.";
-    keywords = [...commonKeywords, ...devilPlanKeywords, "나이트 투어", "체스 퍼즐", "알고리즘 시각화", "보드 게임", "전략 게임", "두뇌 게임"];
+    title = "기사의 여행";
+    description = "가상 체스판에서의 기사의 여행. 플레이 가능";
+    keywords = [...commonKeywords, ...devilPlanKeywords, "기사의 여행" , "나이트 투어", "체스 퍼즐", "보드 게임", "전략 게임", "두뇌 게임"];
     openGraphLocale = 'ko_KR';
   } else { // Default to English
     title = "Knight's Tour Navigator | Chess Puzzle Visualization - The Devil's Plan";
