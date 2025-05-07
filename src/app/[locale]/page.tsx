@@ -8,9 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { ChessKnightIcon } from '@/components/icons/ChessKnightIcon';
-// import { useToast } from "@/hooks/use-toast"; // Toasts removed for invalid moves
 import { cn } from '@/lib/utils';
-import { Clock, Bot, Info, Gamepad2, RefreshCcw } from 'lucide-react';
+import { Clock, Bot, Info, Gamepad2, RefreshCcw, HelpCircle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 type Cell = {
   x: number;
@@ -38,7 +45,6 @@ const KnightTourPage: React.FC = () => {
   const [tourPath, setTourPath] = useState<{ x: number; y: number }[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [isVisualizing, setIsVisualizing] = useState<boolean>(false);
-  // const { toast } = useToast(); // Toasts removed for invalid moves
 
   const [isUserPlaying, setIsUserPlaying] = useState<boolean>(false);
   const [userPath, setUserPath] = useState<{ x: number; y: number }[]>([]);
@@ -49,6 +55,7 @@ const KnightTourPage: React.FC = () => {
   const [elapsedTime, setElapsedTime] = useState<number>(0); 
 
   const [gameMessage, setGameMessage] = useState<GameMessage>({ type: null, text: null });
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   const initializeBoard = useCallback((size: number): Cell[][] => {
     return Array(size)
@@ -100,12 +107,7 @@ const KnightTourPage: React.FC = () => {
     setElapsedTime(0);
     setStartTime(null);
     setTimerActive(false);
-    if (notifyStart) {
-       // The initial "Click a square..." message is handled by footerText
-       setGameMessage({ type: null, text: null });
-    } else {
-       setGameMessage({ type: null, text: null });
-    }
+    setGameMessage({ type: null, text: null });
   };
 
   const resetToInitialState = () => {
@@ -278,7 +280,7 @@ const KnightTourPage: React.FC = () => {
       setUserPath([clickedCellCoords]);
       setStartTime(Date.now());
       setTimerActive(true);
-      setGameMessage({ type: 'info', text: "Knight placed. Make your next move." });
+      setGameMessage({ type: null, text: null }); // Removed "Knight placed..." message
     } else { 
       const { x: currentX, y: currentY } = userCurrentPosition;
       const { x: targetX, y: targetY } = clickedCellCoords;
@@ -295,6 +297,7 @@ const KnightTourPage: React.FC = () => {
         newBoard[targetY][targetX].isCurrent = true;
 
         const newPath = [...userPath, clickedCellCoords];
+        setUserPath(newPath); // Update userPath before setting board to ensure footer text is correct
         setBoard(newBoard);
         setUserCurrentPosition(clickedCellCoords);
         setGameMessage({ type: null, text: null }); 
@@ -334,7 +337,7 @@ const KnightTourPage: React.FC = () => {
     if (userPath.length === 0) {
       footerText = "Click a square to start your knight's journey!";
     } else {
-      footerText = `Moves: ${userPath.length}. Time: ${formatTime(elapsedTime)}. Keep going!`;
+      footerText = "Your turn. Make your move.";
     }
   } else if (isVisualizing) {
     footerText = "AI is gracefully navigating the board...";
@@ -399,8 +402,76 @@ const KnightTourPage: React.FC = () => {
           gameMessage.type === 'success' && "game-success-card",
           gameMessage.type === 'error' && "game-error-card animate-shake" 
       )}>
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center text-primary">Knight's Tour Challenge</CardTitle>
+        <CardHeader className="relative">
+          <Dialog open={isHelpModalOpen} onOpenChange={setIsHelpModalOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-4 left-4 text-muted-foreground hover:text-primary p-1 rounded-full z-10"
+                aria-label="How to Play"
+              >
+                <HelpCircle className="w-6 h-6" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-2xl">How to Play Knight's Quest</DialogTitle>
+              </DialogHeader>
+              <div className="pt-4 space-y-3 text-sm text-muted-foreground text-left">
+                <p><strong>Objective:</strong> Visit every square on the board exactly once using standard knight moves.</p>
+                <div>
+                  <strong>Starting the Game:</strong>
+                  <ul className="list-disc list-inside pl-4 mt-1 space-y-1">
+                    <li>Select your desired board size on the initial screen (when the game first loads or after a reset).</li>
+                    <li>Click the "Let's Play!" button.</li>
+                    <li>On the board, click any square to place your knight. This will also start the timer.</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong>Making a Move:</strong>
+                  <ul className="list-disc list-inside pl-4 mt-1 space-y-1">
+                    <li>A knight moves in an "L" shape: two squares in one direction (horizontally or vertically) and then one square perpendicularly.</li>
+                    <li>Click on a valid (unvisited, L-shape) destination square to move your knight.</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong>Winning the Game:</strong>
+                  <ul className="list-disc list-inside pl-4 mt-1 space-y-1">
+                    <li>Successfully visit all squares on the board. A success message will appear.</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong>Game Over (Stuck):</strong>
+                  <ul className="list-disc list-inside pl-4 mt-1 space-y-1">
+                    <li>The game ends if you reach a position where no more valid knight moves are possible. The board will indicate this, and a "Stuck!" message will appear in the footer.</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong>AI Solver:</strong>
+                  <ul className="list-disc list-inside pl-4 mt-1 space-y-1">
+                    <li>If you're curious or stuck, you can watch the AI find a solution.</li>
+                    <li>When no game is active (e.g., after a reset, or on first load before playing), an "AI Controls" section is available below the board. Click "Show AI Solution".</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong>Resetting/Stopping:</strong>
+                  <ul className="list-disc list-inside pl-4 mt-1 space-y-1">
+                    <li>During your game, click the refresh icon (circular arrows) in the top-right corner of the game card to stop the current game and return to the initial state.</li>
+                  </ul>
+                </div>
+                 <div>
+                  <strong>Play Again:</strong>
+                  <ul className="list-disc list-inside pl-4 mt-1 space-y-1">
+                     <li>After a game ends (win or lose), a "Play Again?" button will appear.</li>
+                  </ul>
+                </div>
+                <p className="pt-3 font-semibold text-center text-primary">Good luck on your quest!</p>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <CardTitle className="text-3xl font-bold text-center text-primary pt-1">Knight's Tour Challenge</CardTitle>
           {isUserPlaying && (
             <Button
                 onClick={handleStopUserPlay}
@@ -422,7 +493,7 @@ const KnightTourPage: React.FC = () => {
               </div>
             )}
 
-            {gameMessage?.text && (gameMessage.type === 'success' || (gameMessage.type === 'info' && userPath.length > 0 )) && ( 
+            {gameMessage?.text && (gameMessage.type === 'success' || gameMessage.type === 'info') && ( 
               <p className={cn(
                 "text-center font-semibold px-6 py-3 rounded-lg text-lg my-2 shadow-md",
                 gameMessage.type === 'success' && 'bg-green-100 text-green-800 dark:bg-green-700/40 dark:text-green-100 animate-bounce text-2xl',
@@ -434,7 +505,6 @@ const KnightTourPage: React.FC = () => {
             )}
             
             <div className="flex flex-wrap justify-center gap-4 mt-2">
-              {/* Stop Game button moved to CardHeader as a refresh icon */}
               {(gameMessage?.type === 'success' || isGameOverState) && !isVisualizing && (
                  <Button 
                   onClick={resetToInitialState} 
@@ -543,3 +613,5 @@ const KnightTourPage: React.FC = () => {
 };
 
 export default KnightTourPage;
+
+    
