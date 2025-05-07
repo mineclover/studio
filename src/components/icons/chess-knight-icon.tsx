@@ -7,22 +7,17 @@ interface ChessKnightIconProps extends React.SVGProps<SVGSVGElement> {}
 const ChessKnightIcon: React.FC<ChessKnightIconProps> = ({ className, ...props }) => {
   return (
     <svg
+      viewBox="0 0 512 512"
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
+      fill="currentColor" // Changed from #000000 to currentColor
+      stroke="currentColor" // Added for consistency, though the path doesn't use stroke
+      strokeWidth="0" // Explicitly set to 0 if not used by paths
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={cn("lucide lucide-chess-knight", className)}
+      className={cn("lucide lucide-chess-knight", className)} // Kept existing cn and class for potential styling
       {...props}
     >
-      <path d="M3 14.5A4.5 4.5 0 0 0 7.5 10H10a8 8 0 0 1 1.55-4.03" />
-      <path d="M7.5 10c1.93.84 3.5 2.91 4.5 5.5" />
-      <path d="M11.22 10.27a3.51 3.51 0 0 1-2.22 3.23" />
-      <path d="M14 18.5c.46 0 .92-.04 1.37-.13a11.8 11.8 0 0 0 5.13-6.87c.45-1.32.18-2.92-.76-4.05a4.08 4.08 0 0 0-5.88-.5C12.25 8.36 12 10.5 12 13a6.44 6.44 0 0 0 .58 2.91" />
-      <path d="M21 12c-1.81-1.39-3.32-3.05-4.47-4.82a1.03 1.03 0 0 0-1.46-.38c-.18.1-.34.24-.47.38-.92.92-1.78 2.18-2.52 3.82" />
-      <path d="M20.5 18a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1Z" />
+      <path d="M60.81 476.91h300v-60h-300v60zm233.79-347.3l13.94 7.39c31.88-43.62 61.34-31.85 61.34-31.85l-21.62 53 35.64 19 2.87 33 64.42 108.75-43.55 29.37s-26.82-36.39-39.65-43.66c-10.66-6-41.22-10.25-56.17-12l-67.54-76.91-12 10.56 37.15 42.31c-.13.18-.25.37-.38.57-35.78 58.17 23 105.69 68.49 131.78H84.14C93 85 294.6 129.61 294.6 129.61z"/>
     </svg>
   );
 };
