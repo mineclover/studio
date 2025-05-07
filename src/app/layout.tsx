@@ -9,5 +9,10 @@ export default function RootLayout({
   // This root layout is minimal.
   // The main HTML structure (<html>, <body>, fonts, metadata)
   // will be handled by src/app/[locale]/layout.tsx for localized routes.
-  return <>{children}</>;
+  // However, a basic <html> and <body> structure is still required here.
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
 }
