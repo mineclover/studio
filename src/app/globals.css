@@ -154,4 +154,21 @@
   .animate-shake {
     animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
   }
+
+  /* Styles for better screen capture on game end */
+  .game-success-card {
+    @apply border-2 border-green-500 shadow-2xl shadow-green-500/30;
+  }
+  .dark .game-success-card {
+    @apply border-green-400 shadow-green-400/40;
+  }
+
+  .game-error-card {
+    @apply border-2 border-red-500 shadow-2xl shadow-red-500/30;
+  }
+  .dark .game-error-card {
+    @apply border-red-400 shadow-red-400/40;
+  }
+
 }
+

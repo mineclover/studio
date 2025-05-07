@@ -5,7 +5,7 @@ import type React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { ChessKnightIcon } from '@/components/icons/ChessKnightIcon';
 import { useToast } from "@/hooks/use-toast";
@@ -38,20 +38,16 @@ const KnightTourPage: React.FC = () => {
   const [tourPath, setTourPath] = useState<{ x: number; y: number }[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [isVisualizing, setIsVisualizing] = useState<boolean>(false);
-  // const [animationSpeed, setAnimationSpeed] = useState<number>(300); // AI Speed control removed
   const { toast } = useToast();
 
-  // User play state
   const [isUserPlaying, setIsUserPlaying] = useState<boolean>(false);
   const [userPath, setUserPath] = useState<{ x: number; y: number }[]>([]);
   const [userCurrentPosition, setUserCurrentPosition] = useState<{ x: number; y: number } | null>(null);
 
-  // Timer state
   const [timerActive, setTimerActive] = useState<boolean>(false);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [elapsedTime, setElapsedTime] = useState<number>(0); // in seconds
+  const [elapsedTime, setElapsedTime] = useState<number>(0); 
 
-  // Game status/message state
   const [gameMessage, setGameMessage] = useState<GameMessage>({ type: null, text: null });
 
   const initializeBoard = useCallback((size: number): Cell[][] => {
@@ -71,15 +67,16 @@ const KnightTourPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // This effect handles board size changes
-    setIsUserPlaying(false); // Stop any active game
-    setIsVisualizing(false); // Stop AI visualization
-    resetUserPlayState(false); // Reset all game states
-    setBoard(initializeBoard(boardSize)); // Initialize new board
-  }, [boardSize, initializeBoard]);
+    // This effect handles board size changes, typically from the overlay before game starts
+    if (!isUserPlaying && !isVisualizing) { // Only re-init if no active game
+        setBoard(initializeBoard(boardSize));
+        // Ensure other states are also clean if a game was prematurely stopped by size change
+        // This scenario is less likely with the overlay, but good for robustness
+        resetUserPlayState(false); 
+    }
+  }, [boardSize, initializeBoard, isUserPlaying, isVisualizing]);
 
 
-  // Timer useEffect
   useEffect(() => {
     let intervalId: NodeJS.Timeout | undefined;
     if (timerActive && startTime !== null) {
@@ -103,7 +100,6 @@ const KnightTourPage: React.FC = () => {
   const resetUserPlayState = (notifyStart: boolean = false) => {
     setUserPath([]);
     setUserCurrentPosition(null);
-    // board reset is handled by initializeBoard call in parent handlers or boardSize effect
     setElapsedTime(0);
     setStartTime(null);
     setTimerActive(false);
@@ -114,25 +110,37 @@ const KnightTourPage: React.FC = () => {
     }
   };
 
-  const handleStartUserPlay = () => {
+  const resetToInitialState = () => {
+    setIsUserPlaying(false);
+    setIsVisualizing(false);
+    setTourPath([]);
+    setCurrentStep(0);
+    setBoard(initializeBoard(boardSize)); // Re-init with potentially new boardSize from overlay
+    resetUserPlayState(false); 
+    // showStartOverlay will become true due to these state changes
+  };
+
+  const handleStartUserPlayFromOverlay = () => {
     setIsUserPlaying(true);
     setIsVisualizing(false); 
     setTourPath([]); 
     setCurrentStep(0); 
-    setBoard(initializeBoard(boardSize)); // Ensure board is fresh
-    resetUserPlayState(true);
-    // Toast is optional here as gameMessage provides in-UI feedback
-    // toast({
-    //   title: "Play Mode Activated!",
-    //   description: "Click a square on the board to place your knight.",
-    // });
+    setBoard(initializeBoard(boardSize)); // Ensure board is fresh based on current boardSize
+    resetUserPlayState(true); // true to set initial message: "Click a square..."
   };
 
   const handleStopUserPlay = () => {
     setIsUserPlaying(false);
-    setBoard(initializeBoard(boardSize)); // Reset board to clean state
-    resetUserPlayState(false);
-    toast({ title: "Game Stopped." });
+    // Don't immediately reset board, allow review if stopped mid-game, 
+    // resetToInitialState will handle full reset for new game via overlay
+    setTimerActive(false); // Stop timer
+    if (userPath.length > 0 && userPath.length < boardSize * boardSize) {
+        setGameMessage({ type: 'info', text: `Game stopped. You made ${userPath.length} moves in ${formatTime(elapsedTime)}.` });
+    } else {
+        setGameMessage({ type: null, text: null }); // Clear message if stopped before starting
+    }
+    // Effectively, this makes the overlay appear because isUserPlaying is false and gameMessage is not success/error
+    resetToInitialState(); // Go back to overlay
   };
   
   const isValidMove = (x: number, y: number, size: number, currentBoardState: Cell[][]): boolean => {
@@ -206,38 +214,26 @@ const KnightTourPage: React.FC = () => {
   };
 
   const handleStartVisualization = () => {
-    if (isUserPlaying) handleStopUserPlay(); 
+    if (isUserPlaying) setIsUserPlaying(false); // Stop user play if active
+    resetUserPlayState(false); // Clear user path, timer etc.
     
     setIsVisualizing(true);
     setCurrentStep(0);
     const newBoard = initializeBoard(boardSize);
     setBoard(newBoard);
-    setUserPath([]); // Clear user path as well
-    setUserCurrentPosition(null);
     setGameMessage({ type: 'info', text: 'AI is thinking...' });
-
 
     const foundPath = findTour(boardSize);
     if (foundPath) {
       setTourPath(foundPath);
       setGameMessage({ type: 'info', text: `AI found a tour! Starting visualization.` });
-      // toast({
-      //   title: "AI Tour Found!",
-      //   description: `Starting visualization for a ${boardSize}x${boardSize} board.`,
-      // });
     } else {
       setTourPath([]);
       setIsVisualizing(false);
       setGameMessage({ type: 'error', text: `AI could not find a tour for a ${boardSize}x${boardSize} board from (0,0).` });
-      // toast({
-      //   title: "No AI Tour Found",
-      //   description: `Could not find a Knight's Tour for a ${boardSize}x${boardSize} board from the starting position.`,
-      //   variant: "destructive",
-      // });
     }
   };
 
-  // AI Visualization useEffect
   useEffect(() => {
     if (isVisualizing && !isUserPlaying && tourPath.length > 0 && currentStep < tourPath.length) {
       const timer = setTimeout(() => {
@@ -259,17 +255,13 @@ const KnightTourPage: React.FC = () => {
           return newBoard;
         });
         setCurrentStep((prev) => prev + 1);
-      }, 300); // AI speed is fixed here
+      }, 300); 
       return () => clearTimeout(timer);
     } else if (isVisualizing && !isUserPlaying && currentStep >= tourPath.length && tourPath.length > 0) {
       setIsVisualizing(false);
       setGameMessage({ type: 'info', text: `AI Tour Complete! Visited all ${boardSize*boardSize} squares.` });
-       // toast({
-       //  title: "AI Tour Complete!",
-       //  description: `Knight successfully visited all ${boardSize*boardSize} squares.`,
-      // });
     }
-  }, [isVisualizing, currentStep, tourPath, boardSize, isUserPlaying, initializeBoard]); // Removed animationSpeed
+  }, [isVisualizing, currentStep, tourPath, boardSize, isUserPlaying]); 
 
 
   const getValidMovesFromPosition = (posX: number, posY: number, currentBoardState: Cell[][], bSize: number): {x: number, y:number}[] => {
@@ -289,7 +281,7 @@ const KnightTourPage: React.FC = () => {
 
     const newBoard = board.map(row => row.map(cell => ({ ...cell }))); 
 
-    if (!userCurrentPosition) { // First move
+    if (!userCurrentPosition) { 
       newBoard[clickedCellCoords.y][clickedCellCoords.x].step = 1;
       newBoard[clickedCellCoords.y][clickedCellCoords.x].isCurrent = true;
       
@@ -299,8 +291,7 @@ const KnightTourPage: React.FC = () => {
       setStartTime(Date.now());
       setTimerActive(true);
       setGameMessage({ type: 'info', text: "Knight placed. Make your next move." });
-      // toast({ description: "Knight placed. Make your next move." });
-    } else { // Subsequent moves
+    } else { 
       const { x: currentX, y: currentY } = userCurrentPosition;
       const { x: targetX, y: targetY } = clickedCellCoords;
 
@@ -319,120 +310,129 @@ const KnightTourPage: React.FC = () => {
         setBoard(newBoard);
         setUserCurrentPosition(clickedCellCoords);
         setUserPath(newPath);
-        setGameMessage({ type: 'info', text: 'Good move!' });
-
+        
         if (newPath.length === boardSize * boardSize) {
           setTimerActive(false);
+          setIsUserPlaying(false); // End game
           setGameMessage({ type: 'success', text: `Congratulations! You completed the Knight's Tour in ${formatTime(elapsedTime)}!` });
-          setIsUserPlaying(false); // End game, but don't reset board to show path
-          // toast({
-          //   title: "Congratulations!",
-          //   description: `You've completed the Knight's Tour in ${formatTime(elapsedTime)}!`,
-          // });
         } else {
           const availableMoves = getValidMovesFromPosition(targetX, targetY, newBoard, boardSize);
           if (availableMoves.length === 0) {
             setTimerActive(false);
-            setGameMessage({ type: 'error', text: `Game Over! No more valid moves. You made ${newPath.length} moves in ${formatTime(elapsedTime)}.` });
             setIsUserPlaying(false); // End game
-            // toast({
-            //   title: "Game Over!",
-            //   description: "No more valid moves. You got stuck.",
-            //   variant: "destructive",
-            // });
+            setGameMessage({ type: 'error', text: `Game Over! No more valid moves. You made ${newPath.length} moves in ${formatTime(elapsedTime)}.` });
+          } else {
+            setGameMessage({ type: 'info', text: 'Good move!' });
           }
         }
       } else {
         setGameMessage({ type: 'error', text: "Invalid move. Choose a valid, unvisited square." });
-        // toast({
-        //   description: "Invalid move. Please choose a valid, unvisited square.",
-        //   variant: "destructive",
-        // });
       }
     }
   };
-
-  const isGameActive = isUserPlaying || isVisualizing;
+  
+  const showStartOverlay = !isUserPlaying && !isVisualizing && gameMessage.type !== 'success' && gameMessage.type !== 'error';
   const isBoardInteractable = isUserPlaying && !isVisualizing;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Card className="w-full max-w-2xl shadow-xl">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 relative">
+      {showStartOverlay && (
+        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md shadow-2xl animate-in fade-in-50 zoom-in-90">
+            <CardHeader className="text-center pt-8">
+              <CardTitle className="text-4xl font-bold text-primary">Begin Your Knight's Quest!</CardTitle>
+              <CardDescription className="text-lg text-muted-foreground pt-2">
+                Select board size and embark on the tour.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-8 py-10">
+              <div className="flex items-center gap-4">
+                <Label htmlFor="overlay-board-size-select" className="text-xl font-medium">Board Size:</Label>
+                <Select
+                  value={boardSize.toString()}
+                  onValueChange={(value) => {
+                    setBoardSize(parseInt(value));
+                  }}
+                >
+                  <SelectTrigger id="overlay-board-size-select" className="w-[150px] text-lg py-6 bg-card text-card-foreground">
+                    <SelectValue placeholder="Select size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[5, 6, 7, 8, 9, 10].map((size) => (
+                      <SelectItem key={size} value={size.toString()} className="text-lg">
+                        {size}x{size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={handleStartUserPlayFromOverlay}
+                size="lg"
+                className="w-full max-w-xs bg-accent hover:bg-accent/90 text-accent-foreground text-2xl py-8 rounded-xl shadow-lg transform hover:scale-105 transition-transform"
+              >
+                Play Knight's Tour
+              </Button>
+            </CardContent>
+             <CardFooter className="pb-8 text-center text-sm text-muted-foreground">
+                <p>Good luck, brave knight!</p>
+            </CardFooter>
+          </Card>
+        </div>
+      )}
+
+      <Card className={cn(
+          "w-full max-w-2xl shadow-xl transition-all duration-500 ease-out",
+          showStartOverlay && "opacity-0 pointer-events-none scale-95",
+          !showStartOverlay && "opacity-100 scale-100",
+          gameMessage.type === 'success' && "game-success-card",
+          gameMessage.type === 'error' && "game-error-card"
+      )}>
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center text-primary">Knight's Tour Navigator</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center gap-6 mb-8">
-            <div className="flex items-center gap-4">
-              <Label htmlFor="board-size-select" className="text-lg">Board Size:</Label>
-              <Select
-                value={boardSize.toString()}
-                onValueChange={(value) => {
-                  setBoardSize(parseInt(value));
-                }}
-                disabled={isGameActive}
-              >
-                <SelectTrigger id="board-size-select" className="w-[120px] bg-card text-card-foreground">
-                  <SelectValue placeholder="Select size" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[5, 6, 7, 8, 9, 10].map((size) => (
-                    <SelectItem key={size} value={size.toString()}>
-                      {size}x{size}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-           
-            {/* User Play Controls */}
-            <div className="flex flex-wrap justify-center gap-4">
-              {!isUserPlaying && gameMessage?.type !== 'success' && gameMessage?.type !== 'error' && (
-                <Button 
-                  onClick={handleStartUserPlay} 
-                  disabled={isVisualizing}
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground"
-                >
-                  Play Yourself
-                </Button>
-              )}
+          <div className="flex flex-col items-center gap-4 mb-6">
+            {(timerActive || (elapsedTime > 0 && (gameMessage.type === 'success' || gameMessage.type === 'error'))) && (
+              <div className="flex items-center text-2xl font-semibold text-primary mt-2">
+                <Clock className="w-7 h-7 mr-2" />
+                Time: {formatTime(elapsedTime)}
+              </div>
+            )}
+
+            {gameMessage?.text && (
+              <p className={cn(
+                "text-center font-semibold px-6 py-3 rounded-lg text-lg my-2",
+                gameMessage.type === 'success' && 'bg-green-100 text-green-700 animate-bounce text-2xl',
+                gameMessage.type === 'error' && 'bg-red-100 text-red-700 animate-shake text-2xl',
+                gameMessage.type === 'info' && 'bg-blue-100 text-blue-700',
+                (gameMessage.type === 'success' || gameMessage.type === 'error') && "min-h-[3em] flex items-center justify-center" // ensure space for animation
+              )}>
+                {gameMessage.text}
+              </p>
+            )}
+            
+            <div className="flex flex-wrap justify-center gap-4 mt-2">
               {isUserPlaying && (
                  <Button 
                   onClick={handleStopUserPlay} 
                   variant="destructive"
+                  size="lg"
+                  className="text-lg py-5 px-7"
                 >
                   Stop Playing
                 </Button>
               )}
               {(gameMessage?.type === 'success' || gameMessage?.type === 'error') && !isVisualizing && (
                  <Button 
-                  onClick={handleStartUserPlay} 
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground animate-pulse"
+                  onClick={resetToInitialState} 
+                  className="bg-accent hover:bg-accent/90 text-accent-foreground animate-pulse text-xl py-6 px-8 rounded-lg"
+                  size="lg"
                 >
                   Play Again?
                 </Button>
               )}
             </div>
-            
-            {/* Timer Display */}
-            {timerActive || elapsedTime > 0 ? (
-              <div className="flex items-center text-lg font-semibold text-primary">
-                <Clock className="w-5 h-5 mr-2" />
-                Time: {formatTime(elapsedTime)}
-              </div>
-            ) : null}
-
-            {/* Game Message Display */}
-            {gameMessage?.text && (
-              <p className={cn(
-                "text-center font-medium px-4 py-2 rounded-md",
-                gameMessage.type === 'success' && 'bg-green-100 text-green-700 animate-bounce',
-                gameMessage.type === 'error' && 'bg-red-100 text-red-700 animate-shake', // A shake animation would be cool
-                gameMessage.type === 'info' && 'bg-blue-100 text-blue-700'
-              )}>
-                {gameMessage.text}
-              </p>
-            )}
           </div>
 
           <div
@@ -474,7 +474,7 @@ const KnightTourPage: React.FC = () => {
                   ) : cell.step !== null ? (
                      <span className={cn(
                        "font-bold",
-                       cell.isPath ? 'text-accent-foreground' : ((rowIndex + colIndex) % 2 === 0 ? 'text-secondary-foreground' : 'text-foreground')
+                       cell.isPath ? 'text-accent-foreground/90' : ((rowIndex + colIndex) % 2 === 0 ? 'text-secondary-foreground/90' : 'text-foreground/90')
                      )}>
                       {cell.step}
                     </span>
@@ -483,9 +483,8 @@ const KnightTourPage: React.FC = () => {
               ))
             )}
           </div>
-
-          {/* AI Controls - de-emphasized */}
-          {!isUserPlaying && (
+          
+          {!showStartOverlay && !isUserPlaying && !isVisualizing && !(gameMessage.type === 'success' || gameMessage.type === 'error') && (
             <details className="mt-6 text-center text-sm">
               <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
                 AI Controls (Advanced)
@@ -506,16 +505,17 @@ const KnightTourPage: React.FC = () => {
 
         </CardContent>
       </Card>
-      <footer className="mt-8 text-center text-muted-foreground">
-        <p>
-          {!isGameActive && !gameMessage?.text && "Select board size and start playing, or see an AI solution."}
-          {isUserPlaying && !gameMessage?.text && "Click a square to move the knight."}
-        </p>
-      </footer>
+      {!showStartOverlay && (
+        <footer className="mt-8 text-center text-muted-foreground">
+          <p>
+            {isUserPlaying && userPath.length === 0 && "Click a square to place your knight."}
+            {isUserPlaying && userPath.length > 0 && !gameMessage.text?.toLowerCase().includes('game over') && !gameMessage.text?.toLowerCase().includes('congratulations') && "Continue your tour, brave knight!"}
+            {isVisualizing && "Watch the AI conquer the board!"}
+          </p>
+        </footer>
+      )}
     </div>
   );
 };
 
 export default KnightTourPage;
-
-    
