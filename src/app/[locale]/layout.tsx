@@ -1,17 +1,6 @@
-import type { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
-import { Toaster } from "@/components/ui/toaster";
-import '../globals.css'; // Ensure globals are still applied
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'], // Geist supports Latin, Cyrillic, Greek, Vietnamese
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+import type { Metadata } from 'next';
+// Removed Toaster, Geist, Geist_Mono, Viewport imports as they are in root layout
+// Removed globals.css import as it's in root layout
 
 // Define a base URL for metadata (replace with your actual domain)
 const siteBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://knight.example.com';
@@ -89,28 +78,17 @@ export async function generateMetadata({ params }: { params: { locale: string } 
   };
 }
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "hsl(var(--background))" },
-    { media: "(prefers-color-scheme: dark)", color: "hsl(var(--background))" },
-  ],
-  colorScheme: "light dark",
-}
-
+// Viewport is now defined in src/app/layout.tsx
 
 export default function LocaleLayout({
   children,
+  // params is kept for generateMetadata and generateStaticParams, even if not used in JSX
   params: { locale },
 }: Readonly<{
   children: React.ReactNode;
   params: { locale: string };
 }>) {
-  return (
-    <html lang={locale} suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
-        {children}
-        <Toaster />
-      </body>
-    </html>
-  );
+  // Removed <html> and <body> tags. These are now handled by src/app/layout.tsx.
+  // Font classes and Toaster are also handled by src/app/layout.tsx.
+  return <>{children}</>;
 }
