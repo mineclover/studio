@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { Clock, Bot, Info, Gamepad2, RefreshCcw, HelpCircle, ChessKnight } from 'lucide-react';
+import { Clock, Bot, Info, Gamepad2, RefreshCcw, HelpCircle } from 'lucide-react';
+import ChessKnightIcon from '@/components/icons/chess-knight-icon';
 import {
   Dialog,
   DialogContent,
@@ -541,7 +542,7 @@ const KnightTourPage: React.FC = () => {
                   }}
                 >
                   {cell.isCurrent ? (
-                    <ChessKnight className={cn(
+                    <ChessKnightIcon className={cn(
                       "w-3/5 h-3/5",
                        gameMessage.type === 'error' && !timerActive ? 
                         'text-destructive-foreground opacity-90' : 
