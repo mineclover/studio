@@ -297,7 +297,7 @@ const KnightTourPage: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background text-foreground">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <Card className="w-full max-w-2xl shadow-xl">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center text-primary">Knight's Tour Navigator</CardTitle>
@@ -377,8 +377,8 @@ const KnightTourPage: React.FC = () => {
                   key={`${rowIndex}-${colIndex}`}
                   className={`flex items-center justify-center border border-border 
                               transition-colors duration-100 ease-in-out
-                              ${(rowIndex + colIndex) % 2 === 0 ? 'bg-secondary/50' : 'bg-background'}
-                              ${cell.isPath ? 'bg-accent/30' : ''}
+                              ${(rowIndex + colIndex) % 2 === 0 ? 'bg-secondary/50' : 'bg-background/80'}
+                              ${cell.isPath ? 'bg-accent/40' : ''}
                               ${cell.isCurrent ? '!bg-accent' : ''}
                               ${isUserPlaying && !isVisualizing && cell.step === null ? 'cursor-pointer hover:bg-primary/20' : ''}
                               ${isUserPlaying && !isVisualizing && cell.step !== null ? 'cursor-not-allowed' : ''}
@@ -397,7 +397,7 @@ const KnightTourPage: React.FC = () => {
                   {cell.isCurrent ? (
                     <ChessKnightIcon className="w-3/5 h-3/5 text-accent-foreground animate-pulse" />
                   ) : cell.step !== null ? (
-                    <span className="font-bold text-foreground"> {/* Ensured text-foreground for step numbers */}
+                     <span className={`font-bold ${ (rowIndex + colIndex) % 2 === 0 ? 'text-secondary-foreground' : 'text-foreground' } ${cell.isPath ? 'text-accent-foreground' : ''}`}>
                       {cell.step}
                     </span>
                   ) : null}

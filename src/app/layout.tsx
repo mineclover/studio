@@ -1,34 +1,13 @@
-import type {Metadata} from 'next';
-import {Geist, Geist_Mono} from 'next/font/google';
-import './globals.css';
-import { Toaster } from "@/components/ui/toaster";
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
-
-export const metadata: Metadata = {
-  title: "Knight's Tour Navigator",
-  description: "Visualize the Knight's Tour problem on a chessboard.",
-};
+import type { ReactNode } from 'react';
+import './globals.css'; // Keep globals.css import here for base styles
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
-        <Toaster />
-      </body>
-    </html>
-  );
+  // This root layout is minimal.
+  // The main HTML structure (<html>, <body>, fonts, metadata)
+  // will be handled by src/app/[locale]/layout.tsx for localized routes.
+  return <>{children}</>;
 }
