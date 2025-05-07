@@ -4,40 +4,40 @@
 
 @layer base {
   :root {
-    --background: 0 0% 96%; /* #F5F5F5 Light Gray */
-    --foreground: 208 15% 25%; /* Darker grayish blue for text, e.g., #343E47 */
+    --background: 220 50% 98%; /* Very Light Cool Gray */
+    --foreground: 220 25% 30%; /* Soft Dark Blue/Gray */
 
-    --card: 0 0% 100%; /* White cards */
-    --card-foreground: 208 15% 25%;
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 220 25% 30%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 208 15% 25%;
+    --popover-foreground: 220 25% 30%;
 
-    --primary: 208 25% 48%; /* #607B96 Grayish Blue */
+    --primary: 210 80% 58%; /* Friendly Clear Blue */
     --primary-foreground: 0 0% 100%; /* White */
 
-    --secondary: 208 25% 88%; /* Lighter Grayish Blue */
-    --secondary-foreground: 208 25% 30%; /* Darker Grayish Blue for text on secondary */
+    --secondary: 210 60% 92%; /* Light Blue */
+    --secondary-foreground: 210 40% 40%; /* Darker Blue for text on secondary */
 
-    --muted: 0 0% 90%; /* Slightly darker than background */
-    --muted-foreground: 0 0% 45.1%; /* Standard muted foreground */
+    --muted: 220 40% 90%; /* Light muted cool gray */
+    --muted-foreground: 220 20% 45%; /* Standard muted foreground */
 
-    --accent: 180 100% 25%; /* #008080 Teal */
-    --accent-foreground: 0 0% 100%; /* White */
+    --accent: 30 95% 60%; /* Warm Friendly Orange/Yellow */
+    --accent-foreground: 20 50% 20%; /* Dark Brown/Black for contrast */
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 75% 55%; /* Clear Red */
+    --destructive-foreground: 0 0% 100%; /* White */
 
-    --border: 0 0% 89.8%; /* Default border */
-    --input: 0 0% 89.8%; /* Default input */
-    --ring: 180 100% 25%; /* Teal for focus rings */
+    --border: 220 30% 88%; /* Softer border */
+    --input: 220 30% 88%; 
+    --ring: 210 80% 58%; /* Matches primary */
     
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --radius: 0.75rem; /* Slightly more rounded default */
 
     /* Sidebar specific colors, can remain as is or adjusted if sidebar is used */
     --sidebar-background: 0 0% 98%;
@@ -51,33 +51,33 @@
   }
 
   .dark {
-    --background: 210 23% 17%; /* Dark Grayish Blue */
-    --foreground: 210 10% 83%; /* Light Gray */
+    --background: 220 30% 15%; /* Deep Cool Blue/Gray */
+    --foreground: 210 30% 85%; /* Light Cool Gray */
 
-    --card: 210 23% 20%; 
-    --card-foreground: 210 10% 83%;
+    --card: 220 30% 18%; 
+    --card-foreground: 210 30% 85%;
 
-    --popover: 210 23% 20%;
-    --popover-foreground: 210 10% 83%;
+    --popover: 220 30% 18%;
+    --popover-foreground: 210 30% 85%;
 
-    --primary: 208 25% 55%; /* Lighter Grayish Blue */
-    --primary-foreground: 210 23% 10%; 
+    --primary: 210 80% 65%; /* Brighter Friendly Blue */
+    --primary-foreground: 220 30% 10%; /* Very dark blue for text on primary */
 
-    --secondary: 210 23% 25%; 
-    --secondary-foreground: 210 10% 83%;
+    --secondary: 220 30% 25%; 
+    --secondary-foreground: 210 30% 85%;
 
-    --muted: 210 23% 22%;
-    --muted-foreground: 210 10% 60%;
+    --muted: 220 30% 22%;
+    --muted-foreground: 210 20% 65%;
 
-    --accent: 180 80% 40%; /* #14C2C2 Brighter Teal */
-    --accent-foreground: 210 23% 10%; /* #151A21 Dark Blue/Black (was White) */
+    --accent: 30 90% 65%; /* Brighter Orange/Yellow */
+    --accent-foreground: 0 0% 100%; /* White for better contrast */
 
-    --destructive: 0 70% 50%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 70% 60%; /* Brighter Red */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 210 23% 30%;
-    --input: 210 23% 30%;
-    --ring: 180 80% 40%; /* Brighter Teal for focus rings */
+    --border: 220 25% 35%; /* Softer dark border */
+    --input: 220 25% 35%;
+    --ring: 210 80% 65%; 
     
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -104,6 +104,16 @@
     @apply bg-background text-foreground;
     font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   }
+  /* Increase base radius for a more casual feel */
+  :root {
+    --radius: 0.75rem;
+  }
+  .rounded-lg { @apply rounded-[var(--radius)]; }
+  .rounded-md { @apply rounded-[calc(var(--radius)-0.25rem)]; }
+  .rounded-sm { @apply rounded-[calc(var(--radius)-0.5rem)]; }
+  .rounded-xl { @apply rounded-[calc(var(--radius)+0.25rem)]; }
+  .rounded-2xl { @apply rounded-[calc(var(--radius)+0.5rem)]; }
+
 }
 
 /* Custom Animations */
@@ -164,11 +174,10 @@
   }
 
   .game-error-card {
-    @apply border-2 border-red-500 shadow-2xl shadow-red-500/30;
+    @apply border-2 border-destructive shadow-2xl shadow-destructive/30;
   }
   .dark .game-error-card {
-    @apply border-red-400 shadow-red-400/40;
+    @apply border-red-400 shadow-red-400/40; /* Using a slightly less intense red for dark mode */
   }
 
 }
-

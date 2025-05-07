@@ -8,9 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { ChessKnightIcon } from '@/components/icons/ChessKnightIcon';
-import { useToast } from "@/hooks/use-toast";
+// import { useToast } from "@/hooks/use-toast"; // Toasts removed for invalid moves
 import { cn } from '@/lib/utils';
-import { Clock } from 'lucide-react';
+import { Clock, Bot, Info, Gamepad2 } from 'lucide-react';
 
 type Cell = {
   x: number;
@@ -38,7 +38,7 @@ const KnightTourPage: React.FC = () => {
   const [tourPath, setTourPath] = useState<{ x: number; y: number }[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [isVisualizing, setIsVisualizing] = useState<boolean>(false);
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Toasts removed for invalid moves
 
   const [isUserPlaying, setIsUserPlaying] = useState<boolean>(false);
   const [userPath, setUserPath] = useState<{ x: number; y: number }[]>([]);
@@ -114,7 +114,6 @@ const KnightTourPage: React.FC = () => {
     setCurrentStep(0);
     setBoard(initializeBoard(boardSize)); 
     resetUserPlayState(false); 
-    // This will make showStartOverlay true because gameMessage.type becomes null
   };
 
   const handleStartUserPlayFromOverlay = () => {
@@ -127,12 +126,8 @@ const KnightTourPage: React.FC = () => {
   };
 
   const handleStopUserPlay = () => {
-    // User explicitly stops, go back to overlay
     setTimerActive(false); 
-    if (userPath.length > 0 && userPath.length < boardSize * boardSize) {
-        // Temporary message before overlay takes over
-        toast({ title: "Game Stopped", description: `You made ${userPath.length} moves in ${formatTime(elapsedTime)}.`});
-    }
+    // No toast message needed for stopping, overlay will appear
     resetToInitialState();
   };
   
@@ -214,7 +209,7 @@ const KnightTourPage: React.FC = () => {
     setCurrentStep(0);
     const newBoard = initializeBoard(boardSize);
     setBoard(newBoard);
-    setGameMessage({ type: 'info', text: 'AI is thinking...' });
+    setGameMessage({ type: 'info', text: 'AI is searching for a solution...' });
 
     const foundPath = findTour(boardSize);
     if (foundPath) {
@@ -223,7 +218,7 @@ const KnightTourPage: React.FC = () => {
     } else {
       setTourPath([]);
       setIsVisualizing(false);
-      setGameMessage({ type: 'error', text: `AI could not find a tour for a ${boardSize}x${boardSize} board from (0,0).` });
+      setGameMessage({ type: 'error', text: `AI couldn't find a tour for ${boardSize}x${boardSize} from (0,0).` });
     }
   };
 
@@ -303,7 +298,7 @@ const KnightTourPage: React.FC = () => {
         setBoard(newBoard);
         setUserCurrentPosition(clickedCellCoords);
         setUserPath(newPath);
-        setGameMessage({ type: null, text: null }); // Clear previous messages
+        setGameMessage({ type: null, text: null }); 
         
         if (newPath.length === boardSize * boardSize) {
           setTimerActive(false);
@@ -314,20 +309,12 @@ const KnightTourPage: React.FC = () => {
           if (availableMoves.length === 0) {
             setTimerActive(false);
             setIsUserPlaying(false); 
+            // Game over message handled by footer and card shake
             setGameMessage({ type: 'error', text: `Game Over! No more valid moves. You made ${newPath.length} moves in ${formatTime(elapsedTime)}.` });
-            // Board remains visible, user can see the final state. "Play Again?" will appear.
-          } else {
-            // Removed "Good move!" message as per user request. Visual feedback is primary.
-            // setGameMessage({ type: 'info', text: 'Good move!' }); 
           }
         }
       } else {
-        toast({
-          title: "Invalid Move",
-          description: "Please choose a valid, unvisited square according to the Knight's L-shaped move.",
-          variant: "destructive",
-          duration: 3000,
-        });
+        // No toast for invalid move, just card shake.
         setGameMessage({ type: 'error', text: null }); // Trigger shake, no text banner for this error.
       }
     }
@@ -335,18 +322,41 @@ const KnightTourPage: React.FC = () => {
   
   const showStartOverlay = !isUserPlaying && !isVisualizing && gameMessage.type === null;
   const isBoardInteractable = isUserPlaying && !isVisualizing;
-  const isGameOverState = (!isUserPlaying && gameMessage.type === 'error') || (isUserPlaying && gameMessage.type === 'error' && !timerActive);
+  const isGameOverState = (!isUserPlaying && gameMessage.type === 'error' && !timerActive) || 
+                          (isUserPlaying && gameMessage.type === 'error' && !timerActive);
+
+
+  let footerText = "";
+  if (showStartOverlay) {
+    // Footer not very relevant when overlay is up
+  } else if (isGameOverState) {
+    footerText = `Stuck! ${userPath.length} moves. Try a new game?`;
+  } else if (gameMessage.type === 'success') {
+    footerText = `Victory! ${userPath.length} moves in ${formatTime(elapsedTime)}. Play again?`;
+  } else if (isUserPlaying) {
+    if (userPath.length === 0) {
+      footerText = "Click a square to start your knight's journey!";
+    } else {
+      footerText = `Moves: ${userPath.length}. Time: ${formatTime(elapsedTime)}. Keep going!`;
+    }
+  } else if (isVisualizing) {
+    footerText = "AI is gracefully navigating the board...";
+  } else if (!isUserPlaying && !isVisualizing && gameMessage.type !== 'success' && !isGameOverState) {
+    footerText = "Ready for a new challenge or want to see the AI's solution?";
+  }
 
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 relative">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 relative bg-background">
       {showStartOverlay && (
-        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-md shadow-2xl animate-in fade-in-50 zoom-in-90">
+        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md shadow-2xl animate-in fade-in-50 zoom-in-90 rounded-2xl">
             <CardHeader className="text-center pt-8">
-              <CardTitle className="text-4xl font-bold text-primary">Begin Your Knight's Quest!</CardTitle>
+              <CardTitle className="text-4xl font-bold text-primary flex items-center justify-center gap-2">
+                <Gamepad2 size={40} /> Knight's Quest!
+              </CardTitle>
               <CardDescription className="text-lg text-muted-foreground pt-2">
-                Select board size and embark on the tour.
+                Choose your board and start the adventure.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-8 py-10">
@@ -358,10 +368,10 @@ const KnightTourPage: React.FC = () => {
                     setBoardSize(parseInt(value));
                   }}
                 >
-                  <SelectTrigger id="overlay-board-size-select" className="w-[150px] text-lg py-6 bg-card text-card-foreground">
+                  <SelectTrigger id="overlay-board-size-select" className="w-[150px] text-lg py-6 bg-card text-card-foreground rounded-xl">
                     <SelectValue placeholder="Select size" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-xl">
                     {[5, 6, 7, 8, 9, 10].map((size) => (
                       <SelectItem key={size} value={size.toString()} className="text-lg">
                         {size}x{size}
@@ -375,42 +385,41 @@ const KnightTourPage: React.FC = () => {
                 size="lg"
                 className="w-full max-w-xs bg-accent hover:bg-accent/90 text-accent-foreground text-2xl py-8 rounded-xl shadow-lg transform hover:scale-105 transition-transform"
               >
-                Play Knight's Tour
+                Let's Play!
               </Button>
             </CardContent>
              <CardFooter className="pb-8 text-center text-sm text-muted-foreground">
-                <p>Good luck, brave knight!</p>
+                <p>May your moves be ever onward!</p>
             </CardFooter>
           </Card>
         </div>
       )}
 
       <Card className={cn(
-          "w-full max-w-2xl shadow-xl transition-all duration-500 ease-out",
+          "w-full max-w-2xl shadow-xl transition-all duration-500 ease-out rounded-2xl", // More rounded
           showStartOverlay && "opacity-0 pointer-events-none scale-95",
           !showStartOverlay && "opacity-100 scale-100",
           gameMessage.type === 'success' && "game-success-card",
-          gameMessage.type === 'error' && "game-error-card animate-shake" // Card shakes on error
+          gameMessage.type === 'error' && "game-error-card animate-shake" 
       )}>
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center text-primary">Knight's Tour Navigator</CardTitle>
+          <CardTitle className="text-3xl font-bold text-center text-primary">Knight's Tour Challenge</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center gap-4 mb-6">
-            {(timerActive || (elapsedTime > 0 && (gameMessage.type === 'success' || gameMessage.type === 'error'))) && (
-              <div className="flex items-center text-2xl font-semibold text-primary mt-2">
+            {(timerActive || (elapsedTime > 0 && (gameMessage.type === 'success' || isGameOverState))) && (
+              <div className="flex items-center text-2xl font-semibold text-primary mt-2 bg-secondary/70 dark:bg-secondary/50 px-4 py-2 rounded-lg shadow-sm">
                 <Clock className="w-7 h-7 mr-2" />
-                Time: {formatTime(elapsedTime)}
+                <span>{formatTime(elapsedTime)}</span>
               </div>
             )}
 
-            {gameMessage?.text && ( // This will only render if gameMessage.text is not null or empty
+            {gameMessage?.text && (gameMessage.type === 'success' || gameMessage.type === 'info') && ( 
               <p className={cn(
-                "text-center font-semibold px-6 py-3 rounded-lg text-lg my-2",
-                gameMessage.type === 'success' && 'bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-200 animate-bounce text-2xl',
-                gameMessage.type === 'error' && 'bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-200 text-2xl', // Removed animate-shake here, card handles it
-                gameMessage.type === 'info' && 'bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-200',
-                (gameMessage.type === 'success' || gameMessage.type === 'error') && "min-h-[3em] flex items-center justify-center" 
+                "text-center font-semibold px-6 py-3 rounded-lg text-lg my-2 shadow-md",
+                gameMessage.type === 'success' && 'bg-green-100 text-green-800 dark:bg-green-700/40 dark:text-green-100 animate-bounce text-2xl',
+                gameMessage.type === 'info' && 'bg-blue-100 text-blue-800 dark:bg-blue-700/40 dark:text-blue-100',
+                (gameMessage.type === 'success') && "min-h-[3em] flex items-center justify-center" 
               )}>
                 {gameMessage.text}
               </p>
@@ -422,16 +431,15 @@ const KnightTourPage: React.FC = () => {
                   onClick={handleStopUserPlay} 
                   variant="destructive"
                   size="lg"
-                  className="text-lg py-5 px-7"
+                  className="text-lg py-5 px-7 rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-transform"
                 >
-                  Stop Playing
+                  Stop Game
                 </Button>
               )}
-              {/* "Play Again?" button shows on success OR error, when not visualizing */}
               {(gameMessage?.type === 'success' || isGameOverState) && !isVisualizing && (
                  <Button 
                   onClick={resetToInitialState} 
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground animate-pulse text-xl py-6 px-8 rounded-lg"
+                  className="bg-accent hover:bg-accent/90 text-accent-foreground animate-pulse text-xl py-6 px-8 rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-transform"
                   size="lg"
                 >
                   Play Again?
@@ -441,7 +449,7 @@ const KnightTourPage: React.FC = () => {
           </div>
 
           <div
-            className="grid border border-border shadow-md bg-card rounded-md"
+            className="grid border border-border shadow-md bg-card rounded-xl" // More rounded
             style={{
               gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))`,
               width: '100%',
@@ -455,27 +463,22 @@ const KnightTourPage: React.FC = () => {
                 <div
                   key={`${rowIndex}-${colIndex}`}
                   className={cn(
-                    `flex items-center justify-center border border-border 
-                    transition-colors duration-200 ease-in-out
-                    text-sm md:text-base lg:text-lg font-mono`,
-                    // Base cell background
-                    (rowIndex + colIndex) % 2 === 0 ? 'bg-secondary/50 dark:bg-secondary/30' : 'bg-background/80 dark:bg-background/60',
+                    `flex items-center justify-center border border-border/50 
+                    transition-all duration-200 ease-in-out
+                    text-sm md:text-base lg:text-lg font-mono font-semibold`,
+                    (rowIndex + colIndex) % 2 === 0 ? 'bg-secondary/60 dark:bg-secondary/40' : 'bg-background/90 dark:bg-background/70',
                     
-                    // Path styling
-                    cell.isPath && isGameOverState ? 'bg-destructive/30 dark:bg-destructive/40' : 
-                    (cell.isPath ? 'bg-accent/40 dark:bg-accent/50' : ''),
+                    cell.isPath && isGameOverState ? 'bg-destructive/40 dark:bg-destructive/50' : 
+                    (cell.isPath ? 'bg-accent/50 dark:bg-accent/60' : ''),
 
-                    // Current position styling
-                    cell.isCurrent && isGameOverState ? '!bg-destructive/70 dark:!bg-destructive/60' :
-                    (cell.isCurrent ? '!bg-accent dark:!bg-accent/80' : ''),
+                    cell.isCurrent && isGameOverState ? '!bg-destructive/80 dark:!bg-destructive/70' :
+                    (cell.isCurrent ? '!bg-accent dark:!bg-accent/90' : ''),
 
-                    // Cursor and hover
                     isBoardInteractable ?
-                      (cell.step === null ? 'cursor-pointer hover:bg-primary/20 dark:hover:bg-primary/30' : 'cursor-not-allowed') :
+                      (cell.step === null ? 'cursor-pointer hover:bg-primary/30 dark:hover:bg-primary/40' : 'cursor-not-allowed opacity-70') :
                       'cursor-default',
-
-                    // General game over appearance for unvisited cells
-                    isGameOverState && cell.step === null ? 'opacity-50 brightness-90' : ''
+                    
+                    isGameOverState && cell.step === null ? 'opacity-60 brightness-90' : ''
                   )}
                   style={{ aspectRatio: '1 / 1' }}
                   onClick={() => handleCellClick({ x: cell.x, y: cell.y })}
@@ -492,15 +495,15 @@ const KnightTourPage: React.FC = () => {
                     <ChessKnightIcon className={cn(
                       "w-3/5 h-3/5",
                       isGameOverState ? 
-                        'text-destructive-foreground opacity-90' : // Stuck knight
-                        'text-accent-foreground animate-pulse' // Active/successful knight
+                        'text-destructive-foreground opacity-90' : 
+                        'text-accent-foreground animate-pulse' 
                     )} />
                   ) : cell.step !== null ? (
                      <span className={cn(
                        "font-bold",
                        isGameOverState ?
-                          (cell.isPath ? 'text-destructive-foreground/80 dark:text-destructive-foreground/70' : 'text-foreground/50 dark:text-foreground/40') :
-                          (cell.isPath ? 'text-accent-foreground/90 dark:text-accent-foreground' : ((rowIndex + colIndex) % 2 === 0 ? 'text-secondary-foreground/90 dark:text-secondary-foreground' : 'text-foreground/90 dark:text-foreground'))
+                          (cell.isPath ? 'text-destructive-foreground/90 dark:text-destructive-foreground/80' : 'text-foreground/60 dark:text-foreground/50') :
+                          (cell.isPath ? 'text-accent-foreground/95 dark:text-accent-foreground' : ((rowIndex + colIndex) % 2 === 0 ? 'text-secondary-foreground/95 dark:text-secondary-foreground' : 'text-foreground/95 dark:text-foreground'))
                      )}>
                       {cell.step}
                     </span>
@@ -510,18 +513,18 @@ const KnightTourPage: React.FC = () => {
             )}
           </div>
           
-          {!showStartOverlay && !isUserPlaying && !isVisualizing && !(gameMessage.type === 'success' || gameMessage.type === 'error') && (
-            <details className="mt-6 text-center text-sm">
-              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                AI Controls (Advanced)
+          {!showStartOverlay && !isUserPlaying && !isVisualizing && !(gameMessage.type === 'success' || isGameOverState) && (
+            <details className="mt-6 text-center text-sm group">
+              <summary className="cursor-pointer text-muted-foreground hover:text-foreground inline-flex items-center gap-1 py-1 px-2 rounded-md hover:bg-muted transition-colors">
+                <Bot size={16} /> AI Controls <Info size={14} className="opacity-70 group-hover:opacity-100"/>
               </summary>
-              <div className="mt-2 flex flex-col items-center gap-2">
+              <div className="mt-3 flex flex-col items-center gap-2 bg-muted/50 p-3 rounded-lg shadow-sm">
                 <Button 
                   onClick={handleStartVisualization} 
                   disabled={isVisualizing || isUserPlaying} 
                   variant="outline"
                   size="sm"
-                  className="text-muted-foreground"
+                  className="text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg"
                 >
                   {isVisualizing ? 'Visualizing AI...' : "Show AI Solution"}
                 </Button>
@@ -532,12 +535,8 @@ const KnightTourPage: React.FC = () => {
         </CardContent>
       </Card>
       {!showStartOverlay && (
-        <footer className="mt-8 text-center text-muted-foreground">
-          <p>
-            {isUserPlaying && userPath.length === 0 && "Click a square to place your knight."}
-            {isUserPlaying && userPath.length > 0 && !gameMessage.text?.toLowerCase().includes('game over') && !gameMessage.text?.toLowerCase().includes('congratulations') && gameMessage.type !== 'error' && "Continue your tour, brave knight!"}
-            {isVisualizing && "Watch the AI conquer the board!"}
-          </p>
+        <footer className="mt-8 text-center text-muted-foreground text-base h-8 flex items-center justify-center px-4 py-2 bg-card rounded-lg shadow">
+          <p>{footerText}</p>
         </footer>
       )}
     </div>
