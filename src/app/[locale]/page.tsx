@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { ChessKnightIcon } from '@/components/icons/ChessKnightIcon';
 // import { useToast } from "@/hooks/use-toast"; // Toasts removed for invalid moves
 import { cn } from '@/lib/utils';
-import { Clock, Bot, Info, Gamepad2 } from 'lucide-react';
+import { Clock, Bot, Info, Gamepad2, RefreshCcw } from 'lucide-react';
 
 type Cell = {
   x: number;
@@ -101,7 +101,8 @@ const KnightTourPage: React.FC = () => {
     setStartTime(null);
     setTimerActive(false);
     if (notifyStart) {
-       setGameMessage({ type: 'info', text: 'Click a square to place your knight and start the tour.' });
+       // The initial "Click a square..." message is handled by footerText
+       setGameMessage({ type: null, text: null });
     } else {
        setGameMessage({ type: null, text: null });
     }
@@ -127,7 +128,6 @@ const KnightTourPage: React.FC = () => {
 
   const handleStopUserPlay = () => {
     setTimerActive(false); 
-    // No toast message needed for stopping, overlay will appear
     resetToInitialState();
   };
   
@@ -297,7 +297,6 @@ const KnightTourPage: React.FC = () => {
         const newPath = [...userPath, clickedCellCoords];
         setBoard(newBoard);
         setUserCurrentPosition(clickedCellCoords);
-        setUserPath(newPath);
         setGameMessage({ type: null, text: null }); 
         
         if (newPath.length === boardSize * boardSize) {
@@ -309,13 +308,11 @@ const KnightTourPage: React.FC = () => {
           if (availableMoves.length === 0) {
             setTimerActive(false);
             setIsUserPlaying(false); 
-            // Game over message handled by footer and card shake
             setGameMessage({ type: 'error', text: `Game Over! No more valid moves. You made ${newPath.length} moves in ${formatTime(elapsedTime)}.` });
           }
         }
       } else {
-        // No toast for invalid move, just card shake.
-        setGameMessage({ type: 'error', text: null }); // Trigger shake, no text banner for this error.
+        setGameMessage({ type: 'error', text: null }); 
       }
     }
   };
@@ -396,7 +393,7 @@ const KnightTourPage: React.FC = () => {
       )}
 
       <Card className={cn(
-          "w-full max-w-2xl shadow-xl transition-all duration-500 ease-out rounded-2xl", // More rounded
+          "w-full max-w-2xl shadow-xl transition-all duration-500 ease-out rounded-2xl relative", 
           showStartOverlay && "opacity-0 pointer-events-none scale-95",
           !showStartOverlay && "opacity-100 scale-100",
           gameMessage.type === 'success' && "game-success-card",
@@ -404,6 +401,17 @@ const KnightTourPage: React.FC = () => {
       )}>
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center text-primary">Knight's Tour Challenge</CardTitle>
+          {isUserPlaying && (
+            <Button
+                onClick={handleStopUserPlay}
+                variant="ghost"
+                size="icon"
+                className="absolute top-4 right-4 text-muted-foreground hover:text-destructive p-1 rounded-full"
+                aria-label="Stop Game and Reset"
+            >
+                <RefreshCcw className="w-6 h-6" />
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center gap-4 mb-6">
@@ -414,7 +422,7 @@ const KnightTourPage: React.FC = () => {
               </div>
             )}
 
-            {gameMessage?.text && (gameMessage.type === 'success' || gameMessage.type === 'info') && ( 
+            {gameMessage?.text && (gameMessage.type === 'success' || (gameMessage.type === 'info' && userPath.length > 0 )) && ( 
               <p className={cn(
                 "text-center font-semibold px-6 py-3 rounded-lg text-lg my-2 shadow-md",
                 gameMessage.type === 'success' && 'bg-green-100 text-green-800 dark:bg-green-700/40 dark:text-green-100 animate-bounce text-2xl',
@@ -426,16 +434,7 @@ const KnightTourPage: React.FC = () => {
             )}
             
             <div className="flex flex-wrap justify-center gap-4 mt-2">
-              {isUserPlaying && (
-                 <Button 
-                  onClick={handleStopUserPlay} 
-                  variant="destructive"
-                  size="lg"
-                  className="text-lg py-5 px-7 rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-transform"
-                >
-                  Stop Game
-                </Button>
-              )}
+              {/* Stop Game button moved to CardHeader as a refresh icon */}
               {(gameMessage?.type === 'success' || isGameOverState) && !isVisualizing && (
                  <Button 
                   onClick={resetToInitialState} 
@@ -449,7 +448,7 @@ const KnightTourPage: React.FC = () => {
           </div>
 
           <div
-            className="grid border border-border shadow-md bg-card rounded-xl" // More rounded
+            className="grid border border-border shadow-md bg-card rounded-xl" 
             style={{
               gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))`,
               width: '100%',
