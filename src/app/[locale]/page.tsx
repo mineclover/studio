@@ -26,6 +26,7 @@ type Cell = {
   step: number | null;
   isCurrent: boolean;
   isPath: boolean;
+  isPossibleNextMove?: boolean;
 };
 
 const KNIGHT_MOVES = [
@@ -57,6 +58,8 @@ const KnightTourPage: React.FC = () => {
 
   const [gameMessage, setGameMessage] = useState<GameMessage>({ type: null, text: null });
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [isShaking, setIsShaking] = useState<boolean>(false);
+
 
   const initializeBoard = useCallback((size: number): Cell[][] => {
     return Array(size)
@@ -70,6 +73,7 @@ const KnightTourPage: React.FC = () => {
             step: null,
             isCurrent: false,
             isPath: false,
+            isPossibleNextMove: false,
           }))
       );
   }, []);
@@ -269,53 +273,81 @@ const KnightTourPage: React.FC = () => {
 
   const handleCellClick = (clickedCellCoords: { x: number; y: number }) => {
     if (!isUserPlaying || isVisualizing) return;
-
-    const newBoard = board.map(row => row.map(cell => ({ ...cell }))); 
-
-    if (!userCurrentPosition) { 
-      newBoard[clickedCellCoords.y][clickedCellCoords.x].step = 1;
-      newBoard[clickedCellCoords.y][clickedCellCoords.x].isCurrent = true;
+  
+    if (isShaking) setIsShaking(false); // Reset shake if it was active from a previous quick invalid click
+  
+    // Create a working copy of the board, clearing only previous highlights
+    const boardCopy = board.map(row => row.map(cell => ({ ...cell, isPossibleNextMove: false })));
+  
+    if (!userCurrentPosition) {
+      // First click: Place knight
+      boardCopy[clickedCellCoords.y][clickedCellCoords.x].step = 1;
+      boardCopy[clickedCellCoords.y][clickedCellCoords.x].isCurrent = true;
       
-      setBoard(newBoard);
+      setBoard(boardCopy); // Set the updated board
       setUserCurrentPosition(clickedCellCoords);
       setUserPath([clickedCellCoords]);
       setStartTime(Date.now());
       setTimerActive(true);
       setGameMessage({ type: null, text: null }); 
-    } else { 
+    } else {
+      // Subsequent click
       const { x: currentX, y: currentY } = userCurrentPosition;
       const { x: targetX, y: targetY } = clickedCellCoords;
-
+  
       const dx = Math.abs(targetX - currentX);
       const dy = Math.abs(targetY - currentY);
       const isKnightMoveRule = (dx === 1 && dy === 2) || (dx === 2 && dy === 1);
-
+  
       if (isKnightMoveRule && isValidMove(targetX, targetY, boardSize, board)) {
-        newBoard[currentY][currentX].isCurrent = false;
-        newBoard[currentY][currentX].isPath = true;
-
-        newBoard[targetY][targetX].step = userPath.length + 1;
-        newBoard[targetY][targetX].isCurrent = true;
-
+        // Valid move
+        boardCopy[currentY][currentX].isCurrent = false;
+        boardCopy[currentY][currentX].isPath = true;
+  
+        boardCopy[targetY][targetX].step = userPath.length + 1;
+        boardCopy[targetY][targetX].isCurrent = true;
+  
         const newPath = [...userPath, clickedCellCoords];
         setUserPath(newPath); 
-        setBoard(newBoard);
+        setBoard(boardCopy); // Commit the board with the new move
         setUserCurrentPosition(clickedCellCoords);
         setGameMessage({ type: null, text: null }); 
         
         if (newPath.length === boardSize * boardSize) {
           setTimerActive(false);
-          // setIsUserPlaying(false); // Keep user playing true to allow "Play Again" from game over state
           setGameMessage({ type: 'success', text: `Congratulations! You completed the Knight's Tour in ${formatTime(elapsedTime)}!` });
         } else {
-          const availableMoves = getValidMovesFromPosition(targetX, targetY, newBoard, boardSize);
+          const availableMoves = getValidMovesFromPosition(targetX, targetY, boardCopy, boardSize);
           if (availableMoves.length === 0) {
             setTimerActive(false);
-            // setIsUserPlaying(false); // Keep user playing true
             setGameMessage({ type: 'error', text: `Game Over! No more valid moves. You made ${newPath.length} moves.` });
           }
         }
       } else {
+        // Invalid move
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 600); // Match subtle shake animation duration
+  
+        if (userCurrentPosition) { // Only show possible moves if a knight is on the board
+          const validNextMoves = getValidMovesFromPosition(userCurrentPosition.x, userCurrentPosition.y, board, boardSize);
+          
+          const boardWithHighlights = boardCopy.map((row) =>
+            row.map((cell) => {
+              const isPossible = validNextMoves.some(m => m.x === cell.x && m.y === cell.y);
+              return { ...cell, isPossibleNextMove: isPossible };
+            })
+          );
+          setBoard(boardWithHighlights); // Show highlights
+  
+          // Clear highlights after a delay
+          setTimeout(() => {
+            setBoard(prevBrd =>
+              prevBrd.map(row =>
+                row.map(cell => ({ ...cell, isPossibleNextMove: false }))
+              )
+            );
+          }, 2000); // Highlight for 2 seconds
+        }
         setGameMessage({ type: 'error', text: null }); 
       }
     }
@@ -379,8 +411,9 @@ const KnightTourPage: React.FC = () => {
           "w-full max-w-2xl shadow-xl transition-all duration-500 ease-out rounded-2xl relative", 
           showStartOverlay && "opacity-0 pointer-events-none scale-95",
           !showStartOverlay && "opacity-100 scale-100",
-          gameMessage.type === 'success' && !timerActive && "game-success-card", // Apply only when game is won and timer stopped
-          gameMessage.type === 'error' && !timerActive && "game-error-card animate-shake"  // Apply only when game is lost and timer stopped
+          gameMessage.type === 'success' && !timerActive && "game-success-card",
+          gameMessage.type === 'error' && !timerActive && "game-error-card animate-shake",
+          isShaking && "animate-shake-subtle"
       )}>
         <CardHeader className="relative">
           <Dialog open={isHelpModalOpen} onOpenChange={setIsHelpModalOpen}>
@@ -452,9 +485,9 @@ const KnightTourPage: React.FC = () => {
           </Dialog>
 
           <CardTitle className="text-3xl font-bold text-center text-primary pt-1">Knight's Tour Challenge</CardTitle>
-          {(isUserPlaying || isVisualizing || isGameOverState) && !showStartOverlay && ( // Show reset if game active, visualizing, or game over
+          {(isUserPlaying || isVisualizing || isGameOverState) && !showStartOverlay && ( 
             <Button
-                onClick={handleStopUserPlay} // This function already resets the game
+                onClick={handleStopUserPlay} 
                 variant="ghost"
                 size="icon"
                 className="absolute top-4 right-4 text-muted-foreground hover:text-destructive p-1 rounded-full"
@@ -467,7 +500,7 @@ const KnightTourPage: React.FC = () => {
         <CardContent>
           <div className="flex flex-col items-center gap-4 mb-6">
              {!showStartOverlay && (
-              <div className="flex items-center text-2xl font-semibold text-primary mt-2 bg-secondary/70 dark:bg-secondary/50 px-4 py-2 rounded-lg shadow-sm min-h-[3.5rem] "> {/* Added min-h for stability */}
+              <div className="flex items-center text-2xl font-semibold text-primary mt-2 bg-secondary/70 dark:bg-secondary/50 px-4 py-2 rounded-lg shadow-sm min-h-[3.5rem] ">
                 <Clock className="w-7 h-7 mr-2" />
                 <span>{formatTime(elapsedTime)}</span>
               </div>
@@ -523,6 +556,9 @@ const KnightTourPage: React.FC = () => {
 
                     cell.isCurrent && gameMessage.type === 'error' && !timerActive ? '!bg-destructive/80 dark:!bg-destructive/70 text-destructive-foreground' :
                     (cell.isCurrent ? '!bg-accent dark:!bg-accent/90 text-accent-foreground' : ''),
+                    
+                    cell.isPossibleNextMove && 'bg-primary/30 dark:bg-primary/40 ring-2 ring-primary',
+
 
                     isBoardInteractable ?
                       (cell.step === null ? 'cursor-pointer hover:bg-primary/30 dark:hover:bg-primary/40' : 'cursor-not-allowed opacity-70') :
@@ -595,3 +631,5 @@ const KnightTourPage: React.FC = () => {
 };
 
 export default KnightTourPage;
+
+    
