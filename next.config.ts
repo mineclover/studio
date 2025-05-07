@@ -1,8 +1,9 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
-  output: 'export', // Added for static HTML export
+  output: 'export', // Remains for static HTML export, root page will also be exported.
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -10,6 +11,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    unoptimized: true, // Add this line to disable Image Optimization for static export
     remotePatterns: [
       {
         protocol: 'https',
