@@ -280,7 +280,7 @@ const KnightTourPage: React.FC = () => {
       setUserPath([clickedCellCoords]);
       setStartTime(Date.now());
       setTimerActive(true);
-      setGameMessage({ type: null, text: null }); // Removed "Knight placed..." message
+      setGameMessage({ type: null, text: null }); 
     } else { 
       const { x: currentX, y: currentY } = userCurrentPosition;
       const { x: targetX, y: targetY } = clickedCellCoords;
@@ -297,7 +297,7 @@ const KnightTourPage: React.FC = () => {
         newBoard[targetY][targetX].isCurrent = true;
 
         const newPath = [...userPath, clickedCellCoords];
-        setUserPath(newPath); // Update userPath before setting board to ensure footer text is correct
+        setUserPath(newPath); 
         setBoard(newBoard);
         setUserCurrentPosition(clickedCellCoords);
         setGameMessage({ type: null, text: null }); 
@@ -400,7 +400,7 @@ const KnightTourPage: React.FC = () => {
           showStartOverlay && "opacity-0 pointer-events-none scale-95",
           !showStartOverlay && "opacity-100 scale-100",
           gameMessage.type === 'success' && "game-success-card",
-          gameMessage.type === 'error' && "game-error-card animate-shake" 
+          gameMessage.type === 'error' && !timerActive && "game-error-card animate-shake" 
       )}>
         <CardHeader className="relative">
           <Dialog open={isHelpModalOpen} onOpenChange={setIsHelpModalOpen}>
@@ -418,7 +418,7 @@ const KnightTourPage: React.FC = () => {
               <DialogHeader>
                 <DialogTitle className="text-2xl">How to Play Knight's Quest</DialogTitle>
               </DialogHeader>
-              <div className="pt-4 space-y-3 text-sm text-muted-foreground text-left">
+              <div className="pt-4 space-y-3 text-sm text-muted-foreground text-left max-h-[65vh] overflow-y-auto">
                 <p><strong>Objective:</strong> Visit every square on the board exactly once using standard knight moves.</p>
                 <div>
                   <strong>Starting the Game:</strong>
@@ -537,17 +537,17 @@ const KnightTourPage: React.FC = () => {
                     text-sm md:text-base lg:text-lg font-mono font-semibold`,
                     (rowIndex + colIndex) % 2 === 0 ? 'bg-secondary/60 dark:bg-secondary/40' : 'bg-background/90 dark:bg-background/70',
                     
-                    cell.isPath && isGameOverState ? 'bg-destructive/40 dark:bg-destructive/50' : 
+                    cell.isPath && isGameOverState && gameMessage.type === 'error' ? 'bg-destructive/40 dark:bg-destructive/50' : 
                     (cell.isPath ? 'bg-accent/50 dark:bg-accent/60' : ''),
 
-                    cell.isCurrent && isGameOverState ? '!bg-destructive/80 dark:!bg-destructive/70' :
+                    cell.isCurrent && isGameOverState && gameMessage.type === 'error' ? '!bg-destructive/80 dark:!bg-destructive/70' :
                     (cell.isCurrent ? '!bg-accent dark:!bg-accent/90' : ''),
 
                     isBoardInteractable ?
                       (cell.step === null ? 'cursor-pointer hover:bg-primary/30 dark:hover:bg-primary/40' : 'cursor-not-allowed opacity-70') :
                       'cursor-default',
                     
-                    isGameOverState && cell.step === null ? 'opacity-60 brightness-90' : ''
+                    isGameOverState && gameMessage.type === 'error' && cell.step === null ? 'opacity-60 brightness-90' : ''
                   )}
                   style={{ aspectRatio: '1 / 1' }}
                   onClick={() => handleCellClick({ x: cell.x, y: cell.y })}
@@ -563,14 +563,14 @@ const KnightTourPage: React.FC = () => {
                   {cell.isCurrent ? (
                     <ChessKnightIcon className={cn(
                       "w-3/5 h-3/5",
-                      isGameOverState ? 
+                      isGameOverState && gameMessage.type === 'error' ? 
                         'text-destructive-foreground opacity-90' : 
                         'text-accent-foreground animate-pulse' 
                     )} />
                   ) : cell.step !== null ? (
                      <span className={cn(
                        "font-bold",
-                       isGameOverState ?
+                       isGameOverState && gameMessage.type === 'error' ?
                           (cell.isPath ? 'text-destructive-foreground/90 dark:text-destructive-foreground/80' : 'text-foreground/60 dark:text-foreground/50') :
                           (cell.isPath ? 'text-accent-foreground/95 dark:text-accent-foreground' : ((rowIndex + colIndex) % 2 === 0 ? 'text-secondary-foreground/95 dark:text-secondary-foreground' : 'text-foreground/95 dark:text-foreground'))
                      )}>
@@ -613,5 +613,3 @@ const KnightTourPage: React.FC = () => {
 };
 
 export default KnightTourPage;
-
-    
