@@ -16,6 +16,14 @@ const geistMono = Geist_Mono({
 // Define a base URL for metadata (replace with your actual domain)
 const siteBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://knight.example.com';
 
+// Function to generate static paths for locales
+export async function generateStaticParams() {
+  const locales = ['en', 'ko'];
+  return locales.map((locale) => ({
+    locale,
+  }));
+}
+
 export async function generateMetadata({ params }: { params: { locale: string } }): Promise<Metadata> {
   const { locale } = params;
   
