@@ -274,24 +274,21 @@ const KnightTourPage: React.FC = () => {
   const handleCellClick = (clickedCellCoords: { x: number; y: number }) => {
     if (!isUserPlaying || isVisualizing) return;
   
-    if (isShaking) setIsShaking(false); // Reset shake if it was active from a previous quick invalid click
+    if (isShaking) setIsShaking(false); 
   
-    // Create a working copy of the board, clearing only previous highlights
     const boardCopy = board.map(row => row.map(cell => ({ ...cell, isPossibleNextMove: false })));
   
     if (!userCurrentPosition) {
-      // First click: Place knight
       boardCopy[clickedCellCoords.y][clickedCellCoords.x].step = 1;
       boardCopy[clickedCellCoords.y][clickedCellCoords.x].isCurrent = true;
       
-      setBoard(boardCopy); // Set the updated board
+      setBoard(boardCopy); 
       setUserCurrentPosition(clickedCellCoords);
       setUserPath([clickedCellCoords]);
       setStartTime(Date.now());
       setTimerActive(true);
       setGameMessage({ type: null, text: null }); 
     } else {
-      // Subsequent click
       const { x: currentX, y: currentY } = userCurrentPosition;
       const { x: targetX, y: targetY } = clickedCellCoords;
   
@@ -300,7 +297,6 @@ const KnightTourPage: React.FC = () => {
       const isKnightMoveRule = (dx === 1 && dy === 2) || (dx === 2 && dy === 1);
   
       if (isKnightMoveRule && isValidMove(targetX, targetY, boardSize, board)) {
-        // Valid move
         boardCopy[currentY][currentX].isCurrent = false;
         boardCopy[currentY][currentX].isPath = true;
   
@@ -309,7 +305,7 @@ const KnightTourPage: React.FC = () => {
   
         const newPath = [...userPath, clickedCellCoords];
         setUserPath(newPath); 
-        setBoard(boardCopy); // Commit the board with the new move
+        setBoard(boardCopy); 
         setUserCurrentPosition(clickedCellCoords);
         setGameMessage({ type: null, text: null }); 
         
@@ -324,11 +320,10 @@ const KnightTourPage: React.FC = () => {
           }
         }
       } else {
-        // Invalid move
         setIsShaking(true);
-        setTimeout(() => setIsShaking(false), 600); // Match subtle shake animation duration
+        setTimeout(() => setIsShaking(false), 600); 
   
-        if (userCurrentPosition) { // Only show possible moves if a knight is on the board
+        if (userCurrentPosition) { 
           const validNextMoves = getValidMovesFromPosition(userCurrentPosition.x, userCurrentPosition.y, board, boardSize);
           
           const boardWithHighlights = boardCopy.map((row) =>
@@ -337,16 +332,15 @@ const KnightTourPage: React.FC = () => {
               return { ...cell, isPossibleNextMove: isPossible };
             })
           );
-          setBoard(boardWithHighlights); // Show highlights
+          setBoard(boardWithHighlights); 
   
-          // Clear highlights after a delay
           setTimeout(() => {
             setBoard(prevBrd =>
               prevBrd.map(row =>
                 row.map(cell => ({ ...cell, isPossibleNextMove: false }))
               )
             );
-          }, 2000); // Highlight for 2 seconds
+          }, 2000); 
         }
         setGameMessage({ type: 'error', text: null }); 
       }
@@ -532,7 +526,7 @@ const KnightTourPage: React.FC = () => {
           </div>
 
           <div
-            className="grid border border-border shadow-md bg-card rounded-xl" 
+            className="grid border border-border shadow-md bg-card rounded-xl p-1 sm:p-2 gap-1 sm:gap-1.5" // Added p-1/p-2 and gap-1/gap-1.5
             style={{
               gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))`,
               width: '100%',
@@ -546,9 +540,9 @@ const KnightTourPage: React.FC = () => {
                 <div
                   key={`${rowIndex}-${colIndex}`}
                   className={cn(
-                    `flex items-center justify-center border border-border/50 
-                    transition-all duration-200 ease-in-out
-                    text-sm md:text-base lg:text-lg font-mono font-semibold`,
+                    `flex items-center justify-center 
+                    transition-all duration-200 ease-in-out rounded-sm sm:rounded-md 
+                    text-sm md:text-base lg:text-lg font-mono font-semibold relative`, // Added relative for ring offset
                     (rowIndex + colIndex) % 2 === 0 ? 'bg-secondary/60 dark:bg-secondary/40' : 'bg-background/90 dark:bg-background/70',
                     
                     cell.isPath && gameMessage.type === 'error' && !timerActive ? 'bg-destructive/40 dark:bg-destructive/50 text-destructive-foreground/70' : 
@@ -557,7 +551,7 @@ const KnightTourPage: React.FC = () => {
                     cell.isCurrent && gameMessage.type === 'error' && !timerActive ? '!bg-destructive/80 dark:!bg-destructive/70 text-destructive-foreground' :
                     (cell.isCurrent ? '!bg-accent dark:!bg-accent/90 text-accent-foreground' : ''),
                     
-                    cell.isPossibleNextMove && 'bg-primary/30 dark:bg-primary/40 ring-2 ring-primary',
+                    cell.isPossibleNextMove && 'ring-2 ring-primary ring-offset-2 ring-offset-card dark:ring-offset-card',
 
 
                     isBoardInteractable ?
